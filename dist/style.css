@@ -1,0 +1,35 @@
+html {
+    height: 100%;
+}
+
+h1 {
+    color: white;
+    font-family: monospace;
+    margin-left: 3em;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+    border: 2px solid gray;
+    image-rendering: optimizeSpeed;             // Older versions of FF
+    image-rendering: -moz-crisp-edges;          // FF 6.0+
+    image-rendering: -webkit-optimize-contrast; // Safari
+    image-rendering: -o-crisp-edges;            // OS X & Windows Opera (12.02+)
+    image-rendering: pixelated;                 // Awesome future-browsers
+    -ms-interpolation-mode: nearest-neighbor;   // IE
+}
+
+body {
+    height: 90%;
+    margin: 0;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background: rgb(69,72,77); /* Old browsers */
+    background: -moz-linear-gradient(-45deg, rgba(69,72,77,1) 0%, rgba(0,0,0,1) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,rgba(69,72,77,1)), color-stop(100%,rgba(0,0,0,1))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(-45deg, rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(-45deg, rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(-45deg, rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* IE10+ */
+    background: linear-gradient(135deg, rgba(69,72,77,1) 0%,rgba(0,0,0,1) 100%); /* W3C */
+}

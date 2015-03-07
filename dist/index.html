@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Console test</title>
+    <script type="text/javascript" src="jquery-2.1.3.min.js"></script>
+    <script type="text/javascript" src="console.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<h1>(Insert game name here)</h1>
+<script type="text/javascript">
+withConsole(80, 25, {}, function (con) {
+    con.clear();
+    con.drawChar("@", "green", 2, 2);
+    con.drawChar("g", "red", 3, 3);
+    con.drawString("ASDDSADSD", "white", 2, 7);
+});
+</script>
+<!-- <script type="text/javascript" src="Main.js"></script> -->
+</body>
+</html>
