@@ -10,15 +10,9 @@ import Control.Monad.Eff
 import qualified Control.Monad.JQuery as J
 import Graphics.CanvasConsole
 import Debug.Trace
+import Utils
 
 type GameState = { x :: Number, y :: Number }
-
-type ConsoleEff a = forall eff. Eff (con :: ConEff, trace :: Debug.Trace.Trace | eff) a
-
-(>>) :: forall a b m. (Monad m) => m a -> m b -> m b
-(>>) f g = f >>= \_ -> g
-
-(//) = Tuple
 
 
 drawGame :: Console -> GameState -> ConsoleEff GameState

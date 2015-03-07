@@ -7,6 +7,7 @@ foreign import data ConEff :: !
 
 foreign import data Console :: *
 
+type ConsoleEff a = forall eff. Eff (con :: ConEff, trace :: Debug.Trace.Trace | eff) a
 
 foreign import withConsole
     """
