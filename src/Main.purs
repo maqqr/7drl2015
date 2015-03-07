@@ -14,10 +14,14 @@ import GameData
 import Utils
 import Level
 
-type GameState = { level :: Level, playerPos :: Point }
+
+type GameState = { level :: Level, player :: Creature }
 
 initialState :: GameState
-initialState = { level: stringToLevel testLevel, playerPos: {x:3, y:3} }
+initialState = { level: stringToLevel testLevel, player: pl }
+    where
+        pl :: Creature
+        pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -30,17 +34,27 @@ drawGame console state = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     drawString console "Hello worlllddd" "0000FF" 2 8
-    drawChar console "@" "FF0000" state.playerPos.x state.playerPos.y
+    drawCreature state.player
     return state
     where
+        drawCreature :: Creature -> ConsoleEff Unit
+        drawCreature c | c.ctype == Player  = drawChar console "@" "FF0000" c.pos.x c.pos.y
+        drawCreature c | c.ctype == Guard   = drawChar console "G" "0000FF" c.pos.x c.pos.y
+        drawCreature c | c.ctype == Archer  = drawChar console "A" "00FF00" c.pos.x c.pos.y
+        drawCreature c | c.ctype == Peasant = drawChar console "P" "AAAAFF" c.pos.x c.pos.y
+        drawCreature _                      = drawChar console "?" "FFFFFF" 0 0
+
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)    = drawChar console "." "FFFFFF" p.x p.y
         drawTile p (Just Ground) = drawChar console "#" "AAAAAA" p.x p.y
         drawTile p _             = drawChar console "?" "FFFFFF" p.x p.y
 
 
+updateWorld :: GameState -> GameState
+updateWorld state = state
+
 movePlayer :: Tuple Number Number -> GameState -> GameState
-movePlayer (Tuple dx dy) state = state { playerPos = clampPos { x: state.playerPos.x + dx, y: state.playerPos.y + dy } }
+movePlayer (Tuple dx dy) state = state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
     where
         clamp x min max | x < min = min
         clamp x min max | x > max = max
