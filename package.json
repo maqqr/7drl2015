@@ -1,0 +1,26 @@
+{
+  "name": "7drl2015",
+  "version": "0.0.1",
+  "description": "Roguelike made in 7 days",
+  "main": "todo",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maqqr/7drl2015.git"
+  },
+  "keywords": [
+    "7drl"
+  ],
+  "author": "Maqqr",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/maqqr/7drl2015/issues"
+  },
+  "homepage": "https://github.com/maqqr/7drl2015",
+  "dependencies": {
+    "grunt-purescript": "0.6.0",
+    "grunt-contrib-watch": "0.6.1"
+  }
+}
