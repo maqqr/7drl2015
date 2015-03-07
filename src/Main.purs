@@ -14,6 +14,10 @@ import Utils
 
 type GameState = { x :: Number, y :: Number }
 
+onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
+onUpdate console dt state = do
+    drawGame console statedrawGame console dt state = do
+    return state
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console state = do
@@ -38,7 +42,6 @@ makeChar = SU.charAt 0
 numpad :: Number -> Number
 numpad key = 96 + key
 
-
 movementkeys :: M.Map Number (Tuple Number Number)
 movementkeys = M.fromList [numpad 8 // ( 0 // -1)
                           ,numpad 2 // ( 0 //  1)
@@ -52,5 +55,5 @@ onKeyPress console state key = case M.lookup key movementkeys of
 
 onKeyPress console state key = trace $ show key >> return state
 
-main = J.ready $ withConsole 80 25 {x:3, y:3} {onKeyPress: onKeyPress}
+main = J.ready $ withConsole 80 25 {x:3, y:3} {onKeyPress: onKeyPress, onUpdate: onUpdate}
 

@@ -13,6 +13,8 @@ function Console (width, height, gamestate, callbacks) {
     this.initCharMap();
     this.initCells();
     this.hookKeyboard(callbacks["onKeyPress"]);
+    this.onUpdate = callbacks["onUpdate"];
+    this.lastTime = Date.now();
     requestAnimFrame($.proxy(function() { this.loop() }, this));
 }
 
@@ -78,6 +80,9 @@ Console.prototype.drawString = function(txt, col, x, y) {
 };
 
 Console.prototype.loop = function() {
+    var deltaTime = (new Date().getTime() - this.lastTime) / 1000;
+    this.lastTime = Date.now();
+    this.gamestate = this.onUpdate(this)(deltaTime)(this.gamestate)();
     this.renderer.render(this.stage);
     requestAnimFrame($.proxy(function() { this.loop() }, this));
 };

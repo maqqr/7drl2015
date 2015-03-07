@@ -26,7 +26,8 @@ foreign import withConsole
               Number -- Width
            -> Number -- Height
            -> s      -- Initial state
-           -> { onKeyPress :: (Console -> s -> Number -> Eff (con :: ConEff | eff) s) }
+           -> { onKeyPress :: (Console -> s -> Number -> Eff (con :: ConEff | eff) s)
+              , onUpdate   :: Console -> Number -> s -> ConsoleEff s }
            -> Eff (con :: ConEff | eff) Unit
 
 
