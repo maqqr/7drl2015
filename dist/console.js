@@ -64,6 +64,9 @@ Console.prototype.clear = function() {
 };
 
 Console.prototype.drawChar = function(ch, col, x, y) {
+    if (x < 0 || y < 0 || x >= this.consoleWidth || y >= this.consoleHeight) {
+        return;
+    }
     if (isNaN(ch) || ch == " ") {
         ch = ch.charCodeAt(0);
     }
