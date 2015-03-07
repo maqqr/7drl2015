@@ -32,7 +32,6 @@ Console.prototype.hookKeyboard = function(callback) {
         ev = ev || window.event;
         if (callback !== undefined) {
             con.gamestate = callback(con)(con.gamestate)(ev.keyCode)();
-            console.log(con.gamestate);
         }
     }, false);
 };
@@ -47,7 +46,7 @@ Console.prototype.initCells = function() {
             cell.position.y = y * this.charHeight;
             cell.width = this.charWidth;
             cell.height = this.charHeight;
-            //cell.tint = ...;
+            cell.tint = 0xFFFFFF;
             this.cells[x][y] = cell;
             this.stage.addChild(cell);
         }
@@ -66,7 +65,6 @@ Console.prototype.drawChar = function(ch, col, x, y) {
     if (isNaN(ch) || ch == " ") {
         ch = ch.charCodeAt(0);
     }
-    console.log("charChar ch:" + ch + " col:" + col + " x:" + x + " y:" + y);
     this.cells[x][y].texture = this.chars[ch];
     this.cells[x][y].tint = parseInt(col, 16);
 };
@@ -80,7 +78,6 @@ Console.prototype.drawString = function(txt, col, x, y) {
 };
 
 Console.prototype.loop = function() {
-    //console.log(this);
     this.renderer.render(this.stage);
     requestAnimFrame($.proxy(function() { this.loop() }, this));
 };
