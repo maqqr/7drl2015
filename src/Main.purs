@@ -4,6 +4,8 @@ import Data.Char
 import Data.String
 import Data.Maybe
 import Data.Tuple
+import Data.Array (map, updateAt)
+import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
 import qualified Control.Monad.JQuery as J
@@ -56,8 +58,16 @@ drawGame console state = do
         drawTile p _             = drawChar console "?" "FFFFFF" p.x p.y
 
 
+updateCreatures :: GameState -> GameState
+updateCreatures state' = foldl updateCreature state' (enumerate state'.npcs)
+    where
+        -- updateCreature is not allowed to remove creatures.
+        -- Dead creatures will be cleaned up later.
+        updateCreature :: GameState -> Tuple Number Creature -> GameState
+        updateCreature state (Tuple i c) = state
+
 updateWorld :: GameState -> GameState
-updateWorld state = state
+updateWorld = updateCreatures
 
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = isTileSolid <<< fromMaybe Air <<< getTile level

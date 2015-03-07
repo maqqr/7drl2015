@@ -24,3 +24,9 @@ replicate _ v         = []
 
 mapM_ :: forall a b f m. (Foldable f, Applicative m) => (a -> m b) -> f a -> m Unit
 mapM_ = flip for_
+
+enumerate :: forall a. [a] -> [Tuple Number a]
+enumerate xs = enum' xs 0
+    where
+        enum' (x:xs) i = Tuple i x : enum' xs (i + 1)
+        enum' [] _ = []
