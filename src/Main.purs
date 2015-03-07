@@ -30,12 +30,14 @@ drawGame console state = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     drawString console "Hello worlllddd" "0000FF" 2 8
+    drawString console "This is a test line" "CCCC00" 5 21
     drawChar console "@" "FF0000" state.playerPos.x state.playerPos.y
     return state
     where
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)    = drawChar console "." "FFFFFF" p.x p.y
         drawTile p (Just Ground) = drawChar console "#" "AAAAAA" p.x p.y
+        drawTile p (Just Wall)   = drawChar console "#" "331A00" p.x p.y
         drawTile p _             = drawChar console "?" "FFFFFF" p.x p.y
 
 
