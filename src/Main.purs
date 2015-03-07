@@ -15,13 +15,15 @@ import Utils
 import Level
 
 
-type GameState = { level :: Level, player :: Creature }
+type GameState = { level :: Level, player :: Creature, npcs :: [Creature] }
 
 initialState :: GameState
-initialState = { level: stringToLevel testLevel, player: pl }
+initialState = { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
+
+        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -33,7 +35,7 @@ drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console state = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
-    drawString console "Hello worlllddd" "0000FF" 2 8
+    mapM_ drawCreature state.npcs
     drawCreature state.player
     return state
     where
