@@ -31,7 +31,7 @@ initialState = Game { level: stringToLevel testLevel, player: pl, npcs: [testGua
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
-onUpdate console dt st@(Game state) = do
+onUpdate console dt st = do
     drawGame console st
     return st
 
@@ -61,7 +61,11 @@ drawGame console st@(Game state) = do
         drawTile p (Just DoorClosed) = drawChar console "+" "331A00" p.x p.y
         drawTile p (Just DoorOpen)   = drawChar console "|" "331A00" p.x p.y
         drawTile p _                 = drawChar console "?" "FFFFFF" p.x p.y
-
+drawGame console MainMenu = do
+    clear console
+    drawString console "RobberyRL" "FFFFFF" 12 5
+    drawString console "Press space to start" "AAAAAA" 6 12
+    return MainMenu
 
 updateCreatures :: GameState -> GameState
 updateCreatures st@(Game state') = foldl updateCreature st (enumerate state'.npcs)
@@ -100,7 +104,8 @@ onKeyPress console st@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta st
         Nothing    -> return st
+onKeyPress console MainMenu key | key == 32 = return initialState
 onKeyPress _ st _ = return st
 
 
-main = J.ready $ withConsole 80 25 initialState {onKeyPress: onKeyPress, onUpdate: onUpdate}
+main = J.ready $ withConsole 80 25 MainMenu {onKeyPress: onKeyPress, onUpdate: onUpdate}
