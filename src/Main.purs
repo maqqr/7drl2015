@@ -52,10 +52,13 @@ drawGame console state = do
         drawCreatureType p _       = drawChar console "?" "FFFFFF" p.x p.y
 
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
-        drawTile p (Just Air)    = drawChar console "." "FFFFFF" p.x p.y
-        drawTile p (Just Ground) = drawChar console "#" "AAAAAA" p.x p.y
-        drawTile p (Just Wall)   = drawChar console "#" "331A00" p.x p.y
-        drawTile p _             = drawChar console "?" "FFFFFF" p.x p.y
+        drawTile p (Just Air)        = drawChar console "." "FFFFFF" p.x p.y
+        drawTile p (Just Ground)     = drawChar console "#" "AAAAAA" p.x p.y
+        drawTile p (Just Wall)       = drawChar console "#" "331A00" p.x p.y
+        drawTile p (Just DoorLocked) = drawChar console "+" "331A00" p.x p.y
+        drawTile p (Just DoorClosed) = drawChar console "+" "331A00" p.x p.y
+        drawTile p (Just DoorOpen)   = drawChar console "|" "331A00" p.x p.y
+        drawTile p _                 = drawChar console "?" "FFFFFF" p.x p.y
 
 
 updateCreatures :: GameState -> GameState
