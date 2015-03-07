@@ -15,13 +15,15 @@ import Utils
 import Level
 
 
-type GameState = { level :: Level, player :: Creature }
+type GameState = { level :: Level, player :: Creature, npcs :: [Creature] }
 
 initialState :: GameState
-initialState = { level: stringToLevel testLevel, player: pl }
+initialState = { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
+
+        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -33,16 +35,19 @@ drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console state = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
-    drawString console "Hello worlllddd" "0000FF" 2 8
+    mapM_ drawCreature state.npcs
     drawCreature state.player
     return state
     where
         drawCreature :: Creature -> ConsoleEff Unit
-        drawCreature c | c.ctype == Player  = drawChar console "@" "FF0000" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Guard   = drawChar console "G" "0000FF" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Archer  = drawChar console "A" "00FF00" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Peasant = drawChar console "P" "AAAAFF" c.pos.x c.pos.y
-        drawCreature _                      = drawChar console "?" "FFFFFF" 0 0
+        drawCreature c = drawCreatureType c.pos c.ctype
+
+        drawCreatureType :: Point -> CreatureType -> ConsoleEff Unit
+        drawCreatureType p Player  = drawChar console "@" "FF0000" p.x p.y
+        drawCreatureType p Guard   = drawChar console "G" "0000FF" p.x p.y
+        drawCreatureType p Archer  = drawChar console "A" "00FF00" p.x p.y
+        drawCreatureType p Peasant = drawChar console "P" "AAAAFF" p.x p.y
+        drawCreatureType p _       = drawChar console "?" "FFFFFF" p.x p.y
 
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)        = drawChar console "." "FFFFFF" p.x p.y
