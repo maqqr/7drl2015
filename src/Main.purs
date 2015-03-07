@@ -17,10 +17,12 @@ import Utils
 import Level
 
 
-type GameState = { level :: Level, player :: Creature, npcs :: [Creature] }
+data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature] }
+               | MainMenu
+               | CharCreation
 
 initialState :: GameState
-initialState = { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
+initialState = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
@@ -29,17 +31,17 @@ initialState = { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
-onUpdate console dt state = do
-    drawGame console state
-    return state
+onUpdate console dt st@(Game state) = do
+    drawGame console st
+    return st
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
-drawGame console state = do
+drawGame console st@(Game state) = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     mapM_ drawCreature state.npcs
     drawCreature state.player
-    return state
+    return st
     where
         drawCreature :: Creature -> ConsoleEff Unit
         drawCreature c = drawCreatureType c.pos c.ctype
@@ -62,12 +64,12 @@ drawGame console state = do
 
 
 updateCreatures :: GameState -> GameState
-updateCreatures state' = foldl updateCreature state' (enumerate state'.npcs)
+updateCreatures st@(Game state') = foldl updateCreature st (enumerate state'.npcs)
     where
         -- updateCreature is not allowed to remove creatures.
         -- Dead creatures will be cleaned up later.
         updateCreature :: GameState -> Tuple Number Creature -> GameState
-        updateCreature state (Tuple i c) = state { npcs = updateAt i (c { pos = {x: c.pos.x, y: c.pos.y + 1 }}) state.npcs }
+        updateCreature (Game state) (Tuple i c) = Game $ state { npcs = updateAt i (c { pos = {x: c.pos.x, y: c.pos.y + 1 }}) state.npcs }
 
 updateWorld :: GameState -> GameState
 updateWorld = updateCreatures
@@ -76,8 +78,8 @@ isValidMove :: Level -> Point -> Boolean
 isValidMove level = isTileSolid <<< fromMaybe Air <<< getTile level
 
 movePlayer :: Tuple Number Number -> GameState -> GameState
-movePlayer (Tuple dx dy) state | (isValidMove (state.level) ({ x: state.player.pos.x + dx, y: state.player.pos.y + dy })) == true = state
-movePlayer (Tuple dx dy) state | otherwise = updateWorld $ state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
+movePlayer (Tuple dx dy) (Game state) | (isValidMove (state.level) ({ x: state.player.pos.x + dx, y: state.player.pos.y + dy })) == true = Game state
+movePlayer (Tuple dx dy) (Game state) | otherwise = updateWorld $ Game $ state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
     where
         clamp x min max | x < min = min
         clamp x min max | x > max = max
@@ -94,10 +96,11 @@ movementkeys = M.fromList [numpad 8 // ( 0 // -1)
                           ,numpad 6 // ( 1 //  0)]
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
-onKeyPress console state key = case M.lookup key movementkeys of
-    Just delta -> drawGame console $ movePlayer delta state
-    Nothing    -> return state
+onKeyPress console st@(Game state) key =
+    case M.lookup key movementkeys of
+        Just delta -> drawGame console $ movePlayer delta st
+        Nothing    -> return st
+onKeyPress _ st _ = return st
 
-onKeyPress console state key = trace $ show key >> return state
 
 main = J.ready $ withConsole 80 25 initialState {onKeyPress: onKeyPress, onUpdate: onUpdate}

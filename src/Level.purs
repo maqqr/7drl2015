@@ -12,9 +12,9 @@ import Utils
 data Tile = Air | Ground | Wall | DoorLocked | DoorClosed | DoorOpen
 
 data Level = Level
-    { width :: Number
+    { width  :: Number
     , height :: Number
-    , tiles :: [Tile]
+    , tiles  :: [Tile]
     }
 
 isTileSolid :: Tile -> Boolean
