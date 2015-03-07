@@ -34,7 +34,6 @@ drawGame console state = do
     clear console
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     drawString console "Hello worlllddd" "0000FF" 2 8
-    drawString console "This is a test line" "CCCC00" 5 21
     drawCreature state.player
     return state
     where
@@ -55,8 +54,13 @@ drawGame console state = do
 updateWorld :: GameState -> GameState
 updateWorld state = state
 
+--isValidMove :: Level -> Point -> Boolean
+--isValidMove = isTileSolid <<< fromMaybe Air <<< getTile
+
 movePlayer :: Tuple Number Number -> GameState -> GameState
-movePlayer (Tuple dx dy) state = state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
+--movePlayer (Tuple dx dy) state | (isValidMove (state.level) ({ x: state.player.pos.x + dx, y: state.player.pos.y + dy })) == true = state
+--movePlayer (Tuple dx dy) state | otherwise = state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
+movePlayer (Tuple dx dy) state = state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }   
     where
         clamp x min max | x < min = min
         clamp x min max | x > max = max
