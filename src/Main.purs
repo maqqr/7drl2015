@@ -40,11 +40,14 @@ drawGame console state = do
     return state
     where
         drawCreature :: Creature -> ConsoleEff Unit
-        drawCreature c | c.ctype == Player  = drawChar console "@" "FF0000" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Guard   = drawChar console "G" "0000FF" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Archer  = drawChar console "A" "00FF00" c.pos.x c.pos.y
-        drawCreature c | c.ctype == Peasant = drawChar console "P" "AAAAFF" c.pos.x c.pos.y
-        drawCreature _                      = drawChar console "?" "FFFFFF" 0 0
+        drawCreature c = drawCreatureType c.pos c.ctype
+
+        drawCreatureType :: Point -> CreatureType -> ConsoleEff Unit
+        drawCreatureType p Player  = drawChar console "@" "FF0000" p.x p.y
+        drawCreatureType p Guard   = drawChar console "G" "0000FF" p.x p.y
+        drawCreatureType p Archer  = drawChar console "A" "00FF00" p.x p.y
+        drawCreatureType p Peasant = drawChar console "P" "AAAAFF" p.x p.y
+        drawCreatureType p _       = drawChar console "?" "FFFFFF" p.x p.y
 
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)    = drawChar console "." "FFFFFF" p.x p.y
