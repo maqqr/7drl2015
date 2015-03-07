@@ -17,7 +17,7 @@ import Level
 type GameState = { level :: Level, playerPos :: Point }
 
 initialState :: GameState
-initialState = { level: newLevel 80 25, playerPos: {x:3, y:3} }
+initialState = { level: stringToLevel testLevel, playerPos: {x:3, y:3} }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -64,4 +64,3 @@ onKeyPress console state key = case M.lookup key movementkeys of
 onKeyPress console state key = trace $ show key >> return state
 
 main = J.ready $ withConsole 80 25 initialState {onKeyPress: onKeyPress, onUpdate: onUpdate}
-
