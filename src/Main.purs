@@ -20,16 +20,12 @@ type ConsoleEff a = forall eff. Eff (con :: ConEff, trace :: Debug.Trace.Trace |
 
 (//) = Tuple
 
-onInit :: Console -> GameState -> ConsoleEff Unit
-onInit console state = do
-    drawGame console state
-    return unit
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console state = do
     clear console
-    drawString console "Hello worlllddd" "blue" 2 8
-    drawChar console "@" "red" state.x state.y
+    drawString console "Hello worlllddd" "0000FF" 2 8
+    drawChar console "@" "FF0000" state.x state.y
     return state
 
 movePlayer :: Tuple Number Number -> GameState -> GameState
@@ -58,4 +54,5 @@ onKeyPress console state key = case M.lookup (fromCharCode key) movementkeys of
 
 onKeyPress console state key = trace $ show key >> return state
 
-main = J.ready $ withConsole 80 25 {x:3, y:3} onInit onKeyPress
+main = J.ready $ withConsole 80 25 {x:3, y:3} {onKeyPress: onKeyPress}
+

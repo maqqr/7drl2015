@@ -100,9 +100,6 @@ PS.Prelude = (function () {
       return !b;
     }
     ;
-    var Unit = function (x) {
-        return x;
-    };
     var LT = (function () {
         function LT() {
 
@@ -192,7 +189,6 @@ PS.Prelude = (function () {
         };
     };
     var unsafeCompare = unsafeCompareImpl(LT.value)(EQ.value)(GT.value);
-    var unit = {};
     var showNumber = new Show(showNumberImpl);
     var show = function (dict) {
         return dict.show;
@@ -274,7 +270,6 @@ PS.Prelude = (function () {
         };
     };
     return {
-        Unit: Unit, 
         LT: LT, 
         GT: GT, 
         EQ: EQ, 
@@ -288,7 +283,6 @@ PS.Prelude = (function () {
         Apply: Apply, 
         Functor: Functor, 
         Show: Show, 
-        unit: unit, 
         "<>": $less$greater, 
         not: not, 
         "&&": $amp$amp, 
@@ -490,11 +484,9 @@ PS.Graphics_CanvasConsole = (function () {
     function withConsole (w) {
         return function (h) {
             return function (initialState) {
-                return function (func) {
-                    return function (keyFunc) {
-                        return function () {
-                            return new Console(w, h, initialState, func, keyFunc);
-                        }
+                return function (callbacks) {
+                    return function () {
+                        return new Console(w, h, initialState, callbacks);
                     }
                 }
             }
@@ -1223,17 +1215,9 @@ PS.Main = (function () {
         return function (state) {
             return function __do() {
                 Graphics_CanvasConsole.clear(console)();
-                Graphics_CanvasConsole.drawString(console)("Hello worlllddd")("blue")(2)(8)();
-                Graphics_CanvasConsole.drawChar(console)("@")("red")(state.x)(state.y)();
+                Graphics_CanvasConsole.drawString(console)("Hello worlllddd")("0000FF")(2)(8)();
+                Graphics_CanvasConsole.drawChar(console)("@")("FF0000")(state.x)(state.y)();
                 return state;
-            };
-        };
-    };
-    var onInit = function (console) {
-        return function (state) {
-            return function __do() {
-                drawGame(console)(state)();
-                return Prelude.unit;
             };
         };
     };
@@ -1254,7 +1238,9 @@ PS.Main = (function () {
     var main = Control_Monad_JQuery.ready(Graphics_CanvasConsole.withConsole(80)(25)({
         x: 3, 
         y: 3
-    })(onInit)(onKeyPress));
+    })({
+        onKeyPress: onKeyPress
+    }));
     return {
         main: main, 
         onKeyPress: onKeyPress, 
@@ -1262,7 +1248,6 @@ PS.Main = (function () {
         makeChar: makeChar, 
         movePlayer: movePlayer, 
         drawGame: drawGame, 
-        onInit: onInit, 
         "//": $div$div, 
         ">>": $greater$greater
     };

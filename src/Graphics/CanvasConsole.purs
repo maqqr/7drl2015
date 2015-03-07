@@ -13,11 +13,9 @@ foreign import withConsole
     function withConsole (w) {
         return function (h) {
             return function (initialState) {
-                return function (func) {
-                    return function (keyFunc) {
-                        return function () {
-                            return new Console(w, h, initialState, func, keyFunc);
-                        }
+                return function (callbacks) {
+                    return function () {
+                        return new Console(w, h, initialState, callbacks);
                     }
                 }
             }
@@ -27,8 +25,7 @@ foreign import withConsole
               Number -- Width
            -> Number -- Height
            -> s      -- Initial state
-           -> (Console -> s -> Eff (con :: ConEff | eff) Unit) -- Initialization callback
-           -> (Console -> s -> Number -> Eff (con :: ConEff | eff) s)    -- Keypress callback
+           -> { onKeyPress :: (Console -> s -> Number -> Eff (con :: ConEff | eff) s) }
            -> Eff (con :: ConEff | eff) Unit
 
 
