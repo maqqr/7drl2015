@@ -35,14 +35,18 @@ movePlayer (Tuple dx dy) state = clampPos $ state { x = state.x + dx, y = state.
 makeChar :: String -> Char
 makeChar = SU.charAt 0
 
-movementkeys :: M.Map Char (Tuple Number Number)
-movementkeys = M.fromList [makeChar "W" // ( 0 // -1)
-                          ,makeChar "S" // ( 0 //  1)
-                          ,makeChar "A" // (-1 //  0)
-                          ,makeChar "D" // ( 1 //  0)]
+numpad :: Number -> Number
+numpad key = 96 + key
+
+
+movementkeys :: M.Map Number (Tuple Number Number)
+movementkeys = M.fromList [numpad 8 // ( 0 // -1)
+                          ,numpad 2 // ( 0 //  1)
+                          ,numpad 4 // (-1 //  0)
+                          ,numpad 6 // ( 1 //  0)]
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
-onKeyPress console state key = case M.lookup (fromCharCode key) movementkeys of
+onKeyPress console state key = case M.lookup key movementkeys of
     Just delta -> drawGame console $ movePlayer delta state
     Nothing    -> return state
 
