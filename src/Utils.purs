@@ -12,6 +12,11 @@ import qualified Data.String.Unsafe as SU
 
 (//) = Tuple
 
+clamp :: forall a. (Ord a) => a -> a -> a -> a
+clamp x min max | x < min = min
+clamp x min max | x > max = max
+clamp x min max = x
+
 makeChar :: String -> Char
 makeChar = SU.charAt 0
 

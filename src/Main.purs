@@ -115,10 +115,6 @@ moveCreature (Game state) c delta =
         newpos  = clampPos $ c.pos .+. delta
         blocked = not $ isValidMove state.level newpos
 
-        clamp x min max | x < min = min
-        clamp x min max | x > max = max
-        clamp x min max = x
-
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
 
@@ -141,7 +137,8 @@ movementkeys :: M.Map Number Point
 movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
                           ,numpad 2 // {x:  0, y:  1}
                           ,numpad 4 // {x: -1, y:  0}
-                          ,numpad 6 // {x:  1, y:  0}]
+                          ,numpad 6 // {x:  1, y:  0}
+                          ,numpad 5 // {x:  0, y:  0}]
 
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
