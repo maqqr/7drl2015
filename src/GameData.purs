@@ -38,5 +38,8 @@ type Creature =
     , time  :: Number
     }
 
-data Item = Loot { value :: Number, weight :: Number }
-		  | Weapon { dmg :: Number, attackBonus :: Number, weight :: Number }
+data ItemType = Loot   { value :: Number }
+              | Weapon { dmg :: Number, attackBonus :: Number }
+
+type Item = { itemType :: ItemType, pos :: Point, weight :: Number }
+
