@@ -4,6 +4,10 @@ import Data.String
 
 type Point = { x :: Number, y :: Number }
 
+(.+.) :: Point -> Point -> Point
+(.+.) {x = x1, y = y1} {x = x2, y=y2} = {x: x1+x2, y: y1+y2}
+infixl 9 .+.
+
 type Stats = { hp :: Number }
 
 defaultStats = { hp: 10 }
