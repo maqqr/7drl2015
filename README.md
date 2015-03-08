@@ -1,5 +1,5 @@
-# 7drl2015
-Roguelike made in 7 days using Purescript
+# RobberyRL
+Roguelike made in 7 days using Purescript.
 
 #### Development blog
 
