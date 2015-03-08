@@ -17,13 +17,28 @@ import Utils
 import Level
 
 
-data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature], playerName :: String, points :: Number, inventory :: [Item] }
+data GameState = Game { level :: Level
+                      , player :: Creature
+                      , npcs :: [Creature]
+                      , playerName :: String
+                      , points :: Number
+                      , inventory :: [Item]
+                      , freeFallTimer :: Number
+                      }
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
 
 initialState :: String -> GameState
-initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard], playerName: pname, points: 0, inventory: [] }
+initialState pname = Game
+        { level: stringToLevel testLevel
+        , player: pl
+        , npcs: [testGuard]
+        , playerName: pname
+        , points: 0
+        , inventory: []
+        , freeFallTimer: 0
+        }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0 }
@@ -32,9 +47,11 @@ initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [t
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
-onUpdate console dt st = do
-    drawGame console st
-    return st
+onUpdate console dt g@(Game state) | inFreeFall state.level state.player && state.freeFallTimer > 0.1 =
+    drawGame console <<< updateWorld (calcSpeed g state.player) $ Game state { freeFallTimer = 0 }
+onUpdate console dt g@(Game state) | otherwise =
+    drawGame console $ Game state { freeFallTimer = state.freeFallTimer + dt }
+onUpdate console _ g = drawGame console g
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console st@(Game state) = do
@@ -102,6 +119,7 @@ drawGame console (CharCreation {playerName = pname}) = do
     return (CharCreation {playerName: pname})
 
 
+-- Updates all npcs.
 updateCreatures :: Number -> GameState -> GameState
 updateCreatures advance st@(Game state') =
     foldl (\g i -> updateCreature i (advTime i g)) st (0 .. (length state'.npcs - 1))
@@ -125,14 +143,17 @@ updateCreatures advance st@(Game state') =
 
         -- Updates creature at index i until it runs out of time.
         updateCreature :: Number -> GameState -> GameState
-        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (\c -> c.speed) =
-            updateCreature i (updateNpcAt i (updateCreatureOnce i game) (\c -> c { time = c.time - c.speed }))
+        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcSpeed game) =
+            updateCreature i (updateNpcAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game c }))
         updateCreature i game | otherwise = game
 
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
-        updateCreatureOnce i game = updateNpcAt i game $ \c -> moveCreature game c {x: 1, y: 1}
+        updateCreatureOnce i game = updateNpcAt i game $ updatePhysics game
 
+updatePhysics :: GameState -> Creature -> Creature
+updatePhysics g@(Game state) c | inFreeFall state.level c = moveCreature g c {x: 0, y: 1}
+updatePhysics _ c = c
 
 moveCreature :: GameState -> Creature -> Point -> Creature
 moveCreature (Game state) c delta =
@@ -145,15 +166,23 @@ moveCreature (Game state) c delta =
         clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
 
 updateWorld :: Number -> GameState -> GameState
-updateWorld = updateCreatures
+updateWorld advance = updateCreatures advance >>> \(Game state) -> Game state { player = updatePhysics (Game state) state.player }
+
+inFreeFall :: Level -> Creature -> Boolean
+inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1})
 
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 
+-- todo: item weight should affect player
+calcSpeed :: GameState -> Creature -> Number
+calcSpeed (Game state) c | inFreeFall state.level c = 500
+calcSpeed (Game state) c | otherwise                = c.speed
+
 movePlayer :: Point -> GameState -> GameState
-movePlayer delta (Game state) =
+movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld state.player.speed $ Game state { player = moveCreature (Game state) state.player delta }
+        updateWorld (calcSpeed g state.player) $ Game state { player = moveCreature (Game state) state.player delta }
         else Game state
     where
         newpos  = state.player.pos .+. delta
@@ -168,10 +197,11 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
 
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
-onKeyPress console st@(Game state) key =
+onKeyPress console g@(Game state) _ | inFreeFall state.level state.player = return g
+onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
-        Just delta -> drawGame console $ movePlayer delta st
-        Nothing    -> return st
+        Just delta -> drawGame console $ movePlayer delta g
+        Nothing    -> return g
 onKeyPress console MainMenu key                            | key == 13      = return $ NameCreation { playerName: "" }
 onKeyPress console (NameCreation {playerName = pname}) key | key == 13      = return $ CharCreation { playerName: pname }
 onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = return $ NameCreation { playerName: (take (Data.String.length xs - 1) xs) }
