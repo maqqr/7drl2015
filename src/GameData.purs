@@ -12,7 +12,10 @@ type Stats = { hp :: Number }
 
 defaultStats = { hp: 10 }
 
-data CreatureType = Player | Guard | Archer | Peasant
+data CreatureType = Player
+				  | Guard 
+				  | Archer 
+				  | Peasant
 
 instance showCT :: Show CreatureType where
     show Player  = "player"
