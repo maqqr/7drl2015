@@ -1,5 +1,6 @@
 node_modules/
 bower_components/
 tmp/
+.psci_modules/
 dist/Main.js
 .psci
