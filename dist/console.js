@@ -67,9 +67,9 @@ Console.prototype.drawChar = function(ch, col, x, y) {
     if (x < 0 || y < 0 || x >= this.consoleWidth || y >= this.consoleHeight) {
         return;
     }
-    if (isNaN(ch) || ch == " ") {
-        ch = ch.charCodeAt(0);
-    }
+    
+    ch = ch.charCodeAt(0);
+    
     this.cells[x][y].texture = this.chars[ch];
     this.cells[x][y].tint = parseInt(col, 16);
 };
