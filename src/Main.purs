@@ -17,16 +17,16 @@ import Utils
 import Level
 
 
-data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature] }
+data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature], playerName :: String }
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
 
 initialState :: String -> GameState
-initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
+initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard], playerName: pname }
     where
         pl :: Creature
-        pl = { pos: {x: 3, y: 3}, ctype: Player {name: pname}, stats: defaultStats }
+        pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
 
         testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats }
 
@@ -42,17 +42,18 @@ drawGame console st@(Game state) = do
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     mapM_ drawCreature state.npcs
     drawCreature state.player
+    drawString console (state.playerName) "FF0000" 2 24
     return st
     where
         drawCreature :: Creature -> ConsoleEff Unit
         drawCreature c = drawCreatureType c.pos c.ctype
 
         drawCreatureType :: Point -> CreatureType -> ConsoleEff Unit
-        drawCreatureType p (Player name)  = drawChar console "@" "FF0000" p.x p.y
-        drawCreatureType p Guard          = drawChar console "G" "0000FF" p.x p.y
-        drawCreatureType p Archer         = drawChar console "A" "00FF00" p.x p.y
-        drawCreatureType p Peasant        = drawChar console "P" "AAAAFF" p.x p.y
-        drawCreatureType p _              = drawChar console "?" "FFFFFF" p.x p.y
+        drawCreatureType p Player  = drawChar console "@" "FF0000" p.x p.y
+        drawCreatureType p Guard   = drawChar console "G" "0000FF" p.x p.y
+        drawCreatureType p Archer  = drawChar console "A" "00FF00" p.x p.y
+        drawCreatureType p Peasant = drawChar console "P" "AAAAFF" p.x p.y
+        drawCreatureType p _       = drawChar console "?" "FFFFFF" p.x p.y
 
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)        = drawChar console "." "FFFFFF" p.x p.y
@@ -77,7 +78,7 @@ drawGame console (CharCreation {playerName = pname}) = do
     clear console
     drawString console ("Character Creation:   " ++ pname) "FF0000" 2 2
 
-    drawString console "This is a testline, press a to enter game" "FF0000" 2 20
+    drawString console "Press a to enter game" "FF0000" 2 20
 
     drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
     drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
