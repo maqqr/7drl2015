@@ -17,13 +17,13 @@ import Utils
 import Level
 
 
-data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature] }
+data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature], playerName :: String, points :: Number, inventory :: [Item] }
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
 
-initialState :: GameState
-initialState = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
+initialState :: String -> GameState
+initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard], playerName: pname, points: 0, inventory: [] }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0 }
@@ -42,6 +42,9 @@ drawGame console st@(Game state) = do
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     mapM_ drawCreature state.npcs
     drawCreature state.player
+    drawString console (state.playerName) "FF0000" 2 23
+    drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
+    drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
     return st
     where
         drawCreature :: Creature -> ConsoleEff Unit
@@ -77,7 +80,7 @@ drawGame console (CharCreation {playerName = pname}) = do
     clear console
     drawString console ("Character Creation:   " ++ pname) "FF0000" 2 2
 
-    drawString console "This is a testline, press a to enter game" "FF0000" 2 20
+    drawString console "Press a to enter game" "FF0000" 2 20
 
     drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
     drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
@@ -175,7 +178,7 @@ onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = re
 onKeyPress console (NameCreation {playerName = ""}) key                     = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
 onKeyPress console (NameCreation {playerName = xs}) key    | Data.String.length xs > 15 = return $ NameCreation { playerName: xs }
 onKeyPress console (NameCreation {playerName = xs}) key                     = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
-onKeyPress console (CharCreation pname) key                | key == 65      = return initialState --lisää pelaajan nimen vienti initialStateen
+onKeyPress console (CharCreation {playerName = xs}) key    | key == 65      = return $ initialState xs
 onKeyPress _ st _ = return st
 
 
