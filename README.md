@@ -12,7 +12,7 @@ The game is a turn-based platformer roguelike with sneaking and thievery.
 Install [Node.js](https://nodejs.org/), [Haskell Platform 2014.2.0.0](https://www.haskell.org/platform/) and [Purescript](http://www.purescript.org/) and then run the following commands:
 
 ```
-npm install -g bower
+npm install -g grunt-cli bower
 npm install
 bower update
 grunt
