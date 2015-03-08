@@ -33,6 +33,7 @@ Console.prototype.hookKeyboard = function(callback) {
     document.addEventListener("keydown", function(ev) {
         ev = ev || window.event;
         if (callback !== undefined) {
+            console.log(ev.keyCode);
             con.gamestate = callback(con)(con.gamestate)(ev.keyCode)();
         }
     }, false);

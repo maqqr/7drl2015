@@ -98,7 +98,22 @@ updateCreatures st@(Game state') = foldl updateCreature st (enumerate state'.npc
         -- updateCreature is not allowed to remove creatures.
         -- Dead creatures will be cleaned up later.
         updateCreature :: GameState -> Tuple Number Creature -> GameState
-        updateCreature (Game state) (Tuple i c) = Game $ state { npcs = updateAt i (c { pos = {x: c.pos.x, y: c.pos.y + 1 }}) state.npcs }
+        updateCreature (Game state) (Tuple i c) =
+            Game $ state { npcs = updateAt i (moveCreature (Game state) c {x: 1, y: 0}) state.npcs }
+
+moveCreature :: GameState -> Creature -> Point -> Creature
+moveCreature (Game state) c delta =
+    if blocked then c else c { pos = newpos }
+    where
+        newpos  = clampPos { x: c.pos.x + delta.x, y: c.pos.y + delta.y }
+        blocked = isValidMove state.level newpos
+
+        clamp x min max | x < min = min
+        clamp x min max | x > max = max
+        clamp x min max = x
+
+        clampPos :: Point -> Point
+        clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
 
 updateWorld :: GameState -> GameState
 updateWorld = updateCreatures
@@ -106,6 +121,7 @@ updateWorld = updateCreatures
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = isTileSolid <<< fromMaybe Air <<< getTile level
 
+{-
 movePlayer :: Tuple Number Number -> GameState -> GameState
 movePlayer (Tuple dx dy) (Game state) | (isValidMove (state.level) ({ x: state.player.pos.x + dx, y: state.player.pos.y + dy })) == true = Game state
 movePlayer (Tuple dx dy) (Game state) | otherwise = updateWorld $ Game $ state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
@@ -116,7 +132,7 @@ movePlayer (Tuple dx dy) (Game state) | otherwise = updateWorld $ Game $ state {
 
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
-
+-}
 
 movementkeys :: M.Map Number (Tuple Number Number)
 movementkeys = M.fromList [numpad 8 // ( 0 // -1)
