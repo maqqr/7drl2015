@@ -4,7 +4,7 @@ import Data.Char
 import Data.String hiding (length)
 import Data.Maybe
 import Data.Tuple
-import Data.Array ((!!), (..), map, updateAt, range, length)
+import Data.Array ((!!), (..), map, updateAt, range, length, head, filter)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -17,12 +17,13 @@ import Utils
 import Level
 
 
-data GameState = Game { level :: Level
-                      , player :: Creature
-                      , npcs :: [Creature]
-                      , playerName :: String
-                      , points :: Number
-                      , inventory :: [Item]
+data GameState = Game { level         :: Level
+                      , player        :: Creature
+                      , npcs          :: [Creature]
+                      , items         :: [Item]
+                      , playerName    :: String
+                      , points        :: Number
+                      , inventory     :: [Item]
                       , freeFallTimer :: Number
                       }
                | MainMenu
@@ -34,6 +35,7 @@ initialState pname = Game
         { level: stringToLevel testLevel
         , player: pl
         , npcs: [testGuard]
+        , items: [testItem1, testItem2]
         , playerName: pname
         , points: 0
         , inventory: []
@@ -41,9 +43,11 @@ initialState pname = Game
         }
     where
         pl :: Creature
-        pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0 }
+        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0 }
 
         testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0 }
+        testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, weight: 4 }
+        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 6, y: 3}, weight: 1 }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -195,6 +199,20 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
                           ,numpad 6 // {x:  1, y:  0}
                           ,numpad 5 // {x:  0, y:  0}]
 
+pickUp :: Point -> GameState -> GameState
+pickUp point (Game state) =
+    case head (filter (\i -> i.pos .==. point) state.items) of
+        Just item -> Game state { items = deleteItem state.items point, inventory = addItem state.inventory item }
+        Nothing   -> Game state
+    where
+        deleteItem :: [Item] -> Point -> [Item]
+        deleteItem (x:xs) delPos | x.pos .==. delPos = xs
+        deleteItem (x:xs) delPos | otherwise = x : deleteItem xs delPos
+        deleteItem [] _ = []
+
+        addItem :: [Item] -> Item -> [Item]
+        addItem xs { itemType = Loot { value = num } } = xs
+        addItem xs x = x:xs
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _ | inFreeFall state.level state.player = return g
@@ -202,6 +220,7 @@ onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
         Nothing    -> return g
+onKeyPress console st@(Game state) key                     | key == 80      = return st
 onKeyPress console MainMenu key                            | key == 13      = return $ NameCreation { playerName: "" }
 onKeyPress console (NameCreation {playerName = pname}) key | key == 13      = return $ CharCreation { playerName: pname }
 onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = return $ NameCreation { playerName: (take (Data.String.length xs - 1) xs) }

@@ -8,6 +8,9 @@ type Point = { x :: Number, y :: Number }
 (.+.) {x = x1, y = y1} {x = x2, y=y2} = {x: x1+x2, y: y1+y2}
 infixl 9 .+.
 
+(.==.) :: Point -> Point -> Boolean
+(.==.) {x = x1, y = y1} {x = x2, y = y2} = x1 == x2 && y1 == y2
+
 type Stats = { hp :: Number }
 
 defaultStats = { hp: 10 }
@@ -38,5 +41,8 @@ type Creature =
     , time  :: Number
     }
 
-data Item = Loot { value :: Number, weight :: Number }
-		  | Weapon { dmg :: Number, attackBonus :: Number, weight :: Number }
+data ItemType = Loot   { value :: Number }
+              | Weapon { dmg :: Number, attackBonus :: Number }
+
+type Item = { itemType :: ItemType, pos :: Point, weight :: Number }
+
