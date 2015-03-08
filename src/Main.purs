@@ -105,8 +105,8 @@ moveCreature :: GameState -> Creature -> Point -> Creature
 moveCreature (Game state) c delta =
     if blocked then c else c { pos = newpos }
     where
-        newpos  = clampPos { x: c.pos.x + delta.x, y: c.pos.y + delta.y }
-        blocked = isValidMove state.level newpos
+        newpos  = clampPos $ c.pos .+. delta
+        blocked = not $ isValidMove state.level newpos
 
         clamp x min max | x < min = min
         clamp x min max | x > max = max
@@ -119,26 +119,22 @@ updateWorld :: GameState -> GameState
 updateWorld = updateCreatures
 
 isValidMove :: Level -> Point -> Boolean
-isValidMove level = isTileSolid <<< fromMaybe Air <<< getTile level
+isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 
-{-
-movePlayer :: Tuple Number Number -> GameState -> GameState
-movePlayer (Tuple dx dy) (Game state) | (isValidMove (state.level) ({ x: state.player.pos.x + dx, y: state.player.pos.y + dy })) == true = Game state
-movePlayer (Tuple dx dy) (Game state) | otherwise = updateWorld $ Game $ state { player = state.player { pos = clampPos { x: state.player.pos.x + dx, y: state.player.pos.y + dy } } }
+movePlayer :: Point -> GameState -> GameState
+movePlayer delta (Game state) =
+    if canMove then
+        updateWorld $ Game state { player = moveCreature (Game state) state.player delta }
+        else Game state
     where
-        clamp x min max | x < min = min
-        clamp x min max | x > max = max
-        clamp x min max = x
+        newpos  = state.player.pos .+. delta
+        canMove = isValidMove state.level newpos
 
-        clampPos :: Point -> Point
-        clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
--}
-
-movementkeys :: M.Map Number (Tuple Number Number)
-movementkeys = M.fromList [numpad 8 // ( 0 // -1)
-                          ,numpad 2 // ( 0 //  1)
-                          ,numpad 4 // (-1 //  0)
-                          ,numpad 6 // ( 1 //  0)]
+movementkeys :: M.Map Number Point
+movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
+                          ,numpad 2 // {x:  0, y:  1}
+                          ,numpad 4 // {x: -1, y:  0}
+                          ,numpad 6 // {x:  1, y:  0}]
 
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
