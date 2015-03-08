@@ -1,5 +1,7 @@
 # RobberyRL
-Roguelike made in 7 days using Purescript.
+RobberyRL is a roguelike made in 7 days using [Purescript](http://www.purescript.org/).
+
+The game is a turn-based platformer roguelike with sneaking and thievery.
 
 #### Development blog
 
