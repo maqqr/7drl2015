@@ -25,3 +25,6 @@ instance eqCT :: Eq CreatureType where
     (/=) a b = show a /= show b
 
 type Creature = { pos :: Point, ctype :: CreatureType, stats :: Stats }
+
+data Item = Loot { value :: Number, weight :: Number }
+		  | Weapon { dmg :: Number, attackBonus :: Number, weight :: Number }

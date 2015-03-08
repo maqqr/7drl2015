@@ -17,13 +17,13 @@ import Utils
 import Level
 
 
-data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature], playerName :: String }
+data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature], playerName :: String, points :: Number, inventory :: [Item] }
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
 
 initialState :: String -> GameState
-initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard], playerName: pname }
+initialState pname = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard], playerName: pname, points: 0, inventory: [] }
     where
         pl :: Creature
         pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
@@ -42,7 +42,9 @@ drawGame console st@(Game state) = do
     mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
     mapM_ drawCreature state.npcs
     drawCreature state.player
-    drawString console (state.playerName) "FF0000" 2 24
+    drawString console (state.playerName) "FF0000" 2 23
+    drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
+    drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
     return st
     where
         drawCreature :: Creature -> ConsoleEff Unit
