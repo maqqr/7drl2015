@@ -27,4 +27,15 @@ instance eqCT :: Eq CreatureType where
     (==) a b = show a == show b
     (/=) a b = show a /= show b
 
-type Creature = { pos :: Point, ctype :: CreatureType, stats :: Stats }
+type Physics =
+    { vel :: Point   -- Velocity
+    , jump :: Number -- Jump power
+    }
+
+type Creature =
+    { pos   :: Point
+    , ctype :: CreatureType
+    , stats :: Stats
+    , speed :: Number
+    , time  :: Number
+    }

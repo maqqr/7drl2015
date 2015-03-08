@@ -1,10 +1,10 @@
 module Main where
 
 import Data.Char
-import Data.String
+import Data.String hiding (length)
 import Data.Maybe
 import Data.Tuple
-import Data.Array (map, updateAt)
+import Data.Array ((!!), (..), map, updateAt, range, length)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -26,9 +26,9 @@ initialState :: GameState
 initialState = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
     where
         pl :: Creature
-        pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats }
+        pl = { pos: {x: 3, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0 }
 
-        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats }
+        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0 }
 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -99,14 +99,37 @@ drawGame console (CharCreation {playerName = pname}) = do
     return (CharCreation {playerName: pname})
 
 
-updateCreatures :: GameState -> GameState
-updateCreatures st@(Game state') = foldl updateCreature st (enumerate state'.npcs)
+updateCreatures :: Number -> GameState -> GameState
+updateCreatures advance st@(Game state') =
+    foldl (\g i -> updateCreature i (advTime i g)) st (0 .. (length state'.npcs - 1))
     where
-        -- updateCreature is not allowed to remove creatures.
+        -- Updaters are not allowed to remove creatures.
         -- Dead creatures will be cleaned up later.
-        updateCreature :: GameState -> Tuple Number Creature -> GameState
-        updateCreature (Game state) (Tuple i c) =
-            Game $ state { npcs = updateAt i (moveCreature (Game state) c {x: 1, y: 0}) state.npcs }
+
+        -- Advances game time for creature at index i.
+        advTime :: Number -> GameState -> GameState
+        advTime i game = updateNpcAt i game $ \c -> c { time = c.time + advance }
+
+        -- Gets creature information from creature at index i.
+        get :: forall a. Number -> GameState -> a -> (Creature -> a) -> a
+        get i (Game state) d getter = fromMaybe d $ getter <$> state.npcs !! i
+
+        -- Update creature at index i with a function.
+        updateNpcAt :: Number -> GameState -> (Creature -> Creature) -> GameState
+        updateNpcAt i (Game state) f = case state.npcs !! i of
+            Just c  -> Game state { npcs = updateAt i (f c) state.npcs }
+            Nothing -> Game state
+
+        -- Updates creature at index i until it runs out of time.
+        updateCreature :: Number -> GameState -> GameState
+        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (\c -> c.speed) =
+            updateCreature i (updateNpcAt i (updateCreatureOnce i game) (\c -> c { time = c.time - c.speed }))
+        updateCreature i game | otherwise = game
+
+        -- Creature at index i does a single action.
+        updateCreatureOnce :: Number -> GameState -> GameState
+        updateCreatureOnce i game = updateNpcAt i game $ \c -> moveCreature game c {x: 1, y: 1}
+
 
 moveCreature :: GameState -> Creature -> Point -> Creature
 moveCreature (Game state) c delta =
@@ -118,7 +141,7 @@ moveCreature (Game state) c delta =
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
 
-updateWorld :: GameState -> GameState
+updateWorld :: Number -> GameState -> GameState
 updateWorld = updateCreatures
 
 isValidMove :: Level -> Point -> Boolean
@@ -127,7 +150,7 @@ isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta (Game state) =
     if canMove then
-        updateWorld $ Game state { player = moveCreature (Game state) state.player delta }
+        updateWorld state.player.speed $ Game state { player = moveCreature (Game state) state.player delta }
         else Game state
     where
         newpos  = state.player.pos .+. delta
@@ -148,9 +171,9 @@ onKeyPress console st@(Game state) key =
         Nothing    -> return st
 onKeyPress console MainMenu key                            | key == 13      = return $ NameCreation { playerName: "" }
 onKeyPress console (NameCreation {playerName = pname}) key | key == 13      = return $ CharCreation { playerName: pname }
-onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = return $ NameCreation { playerName: (take (length xs - 1) xs) }
+onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = return $ NameCreation { playerName: (take (Data.String.length xs - 1) xs) }
 onKeyPress console (NameCreation {playerName = ""}) key                     = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
-onKeyPress console (NameCreation {playerName = xs}) key    | length xs > 15 = return $ NameCreation { playerName: xs }
+onKeyPress console (NameCreation {playerName = xs}) key    | Data.String.length xs > 15 = return $ NameCreation { playerName: xs }
 onKeyPress console (NameCreation {playerName = xs}) key                     = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
 onKeyPress console (CharCreation pname) key                | key == 65      = return initialState --lisää pelaajan nimen vienti initialStateen
 onKeyPress _ st _ = return st
