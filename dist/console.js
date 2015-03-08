@@ -76,9 +76,17 @@ Console.prototype.drawChar = function(ch, col, x, y) {
 
 Console.prototype.drawString = function(txt, col, x, y) {
     var xx = x;
+    var yy = y;
+    var startx = x;
     for (var i = 0; i < txt.length; i++) {
-        this.drawChar(txt[i], col, xx, y);
-        xx++;
+        if (txt[i] == "\n") {
+            xx = startx;
+            yy++;
+        }
+        else {
+            this.drawChar(txt[i], col, xx, yy);
+            xx++;
+        }
     }
 };
 
