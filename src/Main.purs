@@ -66,6 +66,31 @@ drawGame console MainMenu = do
     drawString console "RobberyRL" "FFFFFF" 12 5
     drawString console "Press space to start" "AAAAAA" 6 12
     return MainMenu
+drawGame console CharCreation = do
+    clear console
+    drawString console "Character Creation:" "FF0000" 2 2
+
+    drawString console "This is a testline, press a to enter game." "FF0000" 2 20
+
+    drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
+    drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
+    drawString console "c) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 6
+    drawString console "d) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 7
+    drawString console "e) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 8
+    drawString console "f) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 9
+    drawString console "g) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
+    drawString console "h) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
+    drawString console "i) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
+
+    --drawString console "Prefix:" "FF0000" 30 2
+    --drawString console "A) Strong (+1 str)" "FF0000" 30 4
+    --drawString console "B) Weak   (-1 str)" "FF0000" 30 5
+    --drawString console "C) Agile  (+1 dex)" "FF0000" 30 6
+    --drawString console "D) Clumsy (-1 dex)" "FF0000" 30 7
+    --drawString console "E) Wise   (+1 int)" "FF0000" 30 8
+    --drawString console "F) Dumb   (-1 int)" "FF0000" 30 9
+    return CharCreation
+
 
 updateCreatures :: GameState -> GameState
 updateCreatures st@(Game state') = foldl updateCreature st (enumerate state'.npcs)
@@ -99,12 +124,14 @@ movementkeys = M.fromList [numpad 8 // ( 0 // -1)
                           ,numpad 4 // (-1 //  0)
                           ,numpad 6 // ( 1 //  0)]
 
+
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console st@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta st
         Nothing    -> return st
-onKeyPress console MainMenu key | key == 32 = return initialState
+onKeyPress console MainMenu key     | key == 32 = return CharCreation
+onKeyPress console CharCreation key | key == 97 = return initialState
 onKeyPress _ st _ = return st
 
 
