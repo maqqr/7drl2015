@@ -131,7 +131,7 @@ onKeyPress console st@(Game state) key =
         Just delta -> drawGame console $ movePlayer delta st
         Nothing    -> return st
 onKeyPress console MainMenu key     | key == 32 = return CharCreation
-onKeyPress console CharCreation key | key == 97 = return initialState
+onKeyPress console CharCreation key | key == 65 = return initialState
 onKeyPress _ st _ = return st
 
 
