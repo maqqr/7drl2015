@@ -19,7 +19,8 @@ import Level
 
 data GameState = Game { level :: Level, player :: Creature, npcs :: [Creature] }
                | MainMenu
-               | CharCreation
+               | NameCreation { playerName :: String }
+               | CharCreation { playerName :: String }
 
 initialState :: GameState
 initialState = Game { level: stringToLevel testLevel, player: pl, npcs: [testGuard] }
@@ -64,13 +65,19 @@ drawGame console st@(Game state) = do
 drawGame console MainMenu = do
     clear console
     drawString console "RobberyRL" "FFFFFF" 12 5
-    drawString console "Press space to start" "AAAAAA" 6 12
+    drawString console "Press enter to start your adventure" "AAAAAA" 6 12
     return MainMenu
-drawGame console CharCreation = do
+drawGame console (NameCreation {playerName = pname}) = do
     clear console
-    drawString console "Character Creation:" "FF0000" 2 2
+    drawString console "What is your name? (max 15 characters):" "FF0000" 4 4
+    drawString console pname "FF0000" 6 6
+    drawString console "Press enter to continue" "FF0000" 4 8
+    return (NameCreation {playerName: pname})
+drawGame console (CharCreation {playerName = pname}) = do
+    clear console
+    drawString console ("Character Creation:   " ++ pname) "FF0000" 2 2
 
-    drawString console "This is a testline, press a to enter game." "FF0000" 2 20
+    drawString console "This is a testline, press a to enter game" "FF0000" 2 20
 
     drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
     drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
@@ -82,14 +89,14 @@ drawGame console CharCreation = do
     drawString console "h) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
     drawString console "i) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
 
-    --drawString console "Prefix:" "FF0000" 30 2
-    --drawString console "A) Strong (+1 str)" "FF0000" 30 4
-    --drawString console "B) Weak   (-1 str)" "FF0000" 30 5
-    --drawString console "C) Agile  (+1 dex)" "FF0000" 30 6
-    --drawString console "D) Clumsy (-1 dex)" "FF0000" 30 7
-    --drawString console "E) Wise   (+1 int)" "FF0000" 30 8
-    --drawString console "F) Dumb   (-1 int)" "FF0000" 30 9
-    return CharCreation
+    --drawString console "Prefix:" "FF0000" 46 13
+    --drawString console "j) Strong (+1 str)" "336600" 47 15
+    --drawString console "k) Weak   (-1 str)" "FF0000" 47 16
+    --drawString console "l) Agile  (+1 dex)" "336600" 47 17
+    --drawString console "m) Clumsy (-1 dex)" "FF0000" 47 18
+    --drawString console "n) Wise   (+1 int)" "336600" 47 19
+    --drawString console "q) Dumb   (-1 int)" "FF0000" 47 20
+    return (CharCreation {playerName: pname})
 
 
 updateCreatures :: GameState -> GameState
@@ -130,8 +137,13 @@ onKeyPress console st@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta st
         Nothing    -> return st
-onKeyPress console MainMenu key     | key == 32 = return CharCreation
-onKeyPress console CharCreation key | key == 65 = return initialState
+onKeyPress console MainMenu key                            | key == 13      = return $ NameCreation { playerName: "" }
+onKeyPress console (NameCreation {playerName = pname}) key | key == 13      = return $ CharCreation { playerName: pname }
+onKeyPress console (NameCreation {playerName = xs}) key    | key == 8       = return $ NameCreation { playerName: (take (length xs - 1) xs) }
+onKeyPress console (NameCreation {playerName = ""}) key                     = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
+onKeyPress console (NameCreation {playerName = xs}) key    | length xs > 15 = return $ NameCreation { playerName: xs }
+onKeyPress console (NameCreation {playerName = xs}) key                     = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
+onKeyPress console (CharCreation pname) key                | key == 65      = return initialState --lisää pelaajan nimen vienti initialStateen
 onKeyPress _ st _ = return st
 
 
