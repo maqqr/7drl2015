@@ -232,7 +232,7 @@ movePlayer delta g@(Game state) =
         canMove = isValidMove state.level newpos
 
 jump :: GameState -> Number -> Creature -> Creature
-jump g xdir c = c { vel = {x: xdir, y: -2} }
+jump g xdir c = c { vel = {x: xdir, y: -3} }
 
 movementkeys :: M.Map Number Point
 movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
