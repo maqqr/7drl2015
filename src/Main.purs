@@ -61,7 +61,7 @@ addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
 addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
-onUpdate console dt g@(Game state) | inFreeFall state.level state.player && state.freeFallTimer > 0.1 =
+onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
     drawGame console <<< updateWorld (calcSpeed g state.player) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
     drawGame console $ Game state { freeFallTimer = state.freeFallTimer + dt }
@@ -196,8 +196,6 @@ updatePhysics g@(Game state) c | inFreeFall state.level c = move g fc (unitp fc.
 
         -- 3. calculate final velocity
         fc = c { vel = { x: finalVelX, y: gc.vel.y } }
-
-
 updatePhysics _ c = c { vel = zerop }
 
 move :: forall r. GameState -> { pos :: Point | r } -> Point -> { pos :: Point | r }
@@ -218,6 +216,16 @@ updateWorld advance = updateCreatures advance
 inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
 
+canGrab :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
+canGrab level c = isFree {x:0, y: 1} && (ledge (-1) || ledge 1)
+    where
+        ledge dx = isFree {x: dx, y: -1} && blocked {x: dx, y: 0}
+        isFree delta  = isValidMove level (c.pos .+. delta)
+        blocked = not <<< isFree
+
+playerCannotAct :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
+playerCannotAct level c = inFreeFall level c && not (canGrab level c)
+
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 
@@ -229,14 +237,17 @@ calcSpeed (Game state) c | otherwise                = c.speed
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld (calcSpeed g state.player) $ Game state { player = move (Game state) state.player delta }
+        updateWorld (calcSpeed g state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
         else Game state
     where
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
 
-jump :: GameState -> Number -> Creature -> Creature
-jump g xdir c = c { vel = {x: xdir, y: -3} }
+playerJump :: GameState -> Number -> GameState
+playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {x: xdir, y: -1}) && not (isValidMove state.level (state.player.pos .+. {x: xdir, y: 0})) =
+    movePlayer {x: xdir, y: -1} g
+playerJump g@(Game state) xdir | otherwise =
+    Game state { player = state.player { vel = {x: xdir, y: -3} } }
 
 movementkeys :: M.Map Number Point
 movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
@@ -261,9 +272,9 @@ pickUp point (Game state) =
         addItem xs x = x:xs
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
-onKeyPress console g@(Game state) _ | inFreeFall state.level state.player = return g
-onKeyPress console g@(Game state) key                      | key == numpad 7 = return $ Game state { player = jump g (-1) state.player }
-onKeyPress console g@(Game state) key                      | key == numpad 9 = return $ Game state { player = jump g 1 state.player }
+onKeyPress console g@(Game state) _ | playerCannotAct state.level state.player = return g
+onKeyPress console g@(Game state) key                      | key == numpad 7 = return $ playerJump g (-1)
+onKeyPress console g@(Game state) key                      | key == numpad 9 = return $ playerJump g 1
 onKeyPress console g@(Game state) key                      | key == 80       = return $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
