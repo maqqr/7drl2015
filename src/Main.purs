@@ -4,7 +4,7 @@ import Data.Char
 import Data.String hiding (length)
 import Data.Maybe
 import Data.Tuple
-import Data.Array ((!!), (..), map, updateAt, range, length, head, filter)
+import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -133,27 +133,25 @@ updateCreatures advance st@(Game state') =
 
         -- Advances game time for creature at index i.
         advTime :: Number -> GameState -> GameState
-        advTime i game = updateNpcAt i game $ \c -> c { time = c.time + advance }
+        advTime i game = modifyCreatureAt i game $ \c -> c { time = c.time + advance }
 
         -- Gets creature information from creature at index i.
         get :: forall a. Number -> GameState -> a -> (Creature -> a) -> a
         get i (Game state) d getter = fromMaybe d $ getter <$> state.npcs !! i
 
-        -- Update creature at index i with a function.
-        updateNpcAt :: Number -> GameState -> (Creature -> Creature) -> GameState
-        updateNpcAt i (Game state) f = case state.npcs !! i of
-            Just c  -> Game state { npcs = updateAt i (f c) state.npcs }
-            Nothing -> Game state
+        -- Modify creature at index i with a function.
+        modifyCreatureAt :: Number -> GameState -> (Creature -> Creature) -> GameState
+        modifyCreatureAt i (Game state) f = Game state { npcs = modifyAt i f state.npcs }
 
         -- Updates creature at index i until it runs out of time.
         updateCreature :: Number -> GameState -> GameState
         updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcSpeed game) =
-            updateCreature i (updateNpcAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game c }))
+            updateCreature i (modifyCreatureAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game c }))
         updateCreature i game | otherwise = game
 
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
-        updateCreatureOnce i game = updateNpcAt i game $ updatePhysics game
+        updateCreatureOnce i game = modifyCreatureAt i game $ updatePhysics game
 
 updatePhysics :: GameState -> Creature -> Creature
 updatePhysics g@(Game state) c | inFreeFall state.level c = moveCreature g c {x: 0, y: 1}

@@ -17,7 +17,7 @@
   "dependencies": {
     "purescript-monoid"               : "0.1.5",
     "purescript-foldable-traversable" : "0.2.1",
-    "purescript-arrays"               : "0.3.1",
+    "purescript-arrays"               : "0.3.3",
     "purescript-maybe"                : "~0.2.1",
     "purescript-strings"              : "0.4.2",
     "purescript-foreign"              : "0.3.0",
