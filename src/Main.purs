@@ -1,10 +1,10 @@
 module Main where
 
 import Data.Char
-import Data.String hiding (length)
+import Data.String hiding (length, drop)
 import Data.Maybe
 import Data.Tuple
-import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter)
+import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter, drop)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -26,6 +26,7 @@ data GameState = Game { level         :: Level
                       , points        :: Number
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
+                      , messageBuf    :: [String]
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -41,6 +42,7 @@ initialState pname = Game
         , points: 0
         , inventory: []
         , freeFallTimer: 0
+        , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
         }
     where
         pl :: Creature
@@ -50,6 +52,13 @@ initialState pname = Game
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 6, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
+messageBufSize :: Number
+messageBufSize = 4
+
+addMsg :: String -> GameState -> GameState
+addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
+    Game state { messageBuf = drop 1 state.messageBuf ++ [msg] }
+addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | inFreeFall state.level state.player && state.freeFallTimer > 0.1 =
@@ -68,8 +77,14 @@ drawGame console g@(Game state) = do
     drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
+    drawStrings {x: 1, y: 20} "FFFFFF" state.messageBuf
     return g
     where
+        drawStrings :: Point -> String -> [String] -> ConsoleEff Unit
+        drawStrings p col (x:xs) = drawString console x col p.x p.y
+                                >> drawStrings {x: p.x, y: p.y + 1} col xs
+        drawStrings _  _  []     = return unit
+
         drawCreature :: Creature -> ConsoleEff Unit
         drawCreature c = drawCreatureType c.pos c.ctype
 
