@@ -18,9 +18,25 @@ zerop = {x: 0, y: 0}
 unitp :: Point -> Point
 unitp p = {x: sign p.x, y: sign p.y}
 
-type Stats = { hp :: Number }
+type Stats = 
+    { hp  :: Number 
+    , def :: Number
+    , str :: Number
+    , dex :: Number
+    , int :: Number
+    }
 
-defaultStats = { hp: 10 }
+defaultStats = { hp: 10, def: 10, str: 10, dex: 10, int: 10}
+
+data SkillType = WeaponSkill
+               | ClimbSkill
+
+type Skill  = { skillType :: SkillType, level :: Number, prog :: Number }
+
+defaultSkills :: [Skill]
+defaultSkills = [ { skillType: WeaponSkill, level: 1, prog: 0 }
+                , { skillType: WeaponSkill, level: 1, prog: 0 }
+                ]
 
 data CreatureType = Player | Guard | Archer | Peasant
 

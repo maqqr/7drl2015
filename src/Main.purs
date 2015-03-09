@@ -24,6 +24,7 @@ data GameState = Game { level         :: Level
                       , items         :: [Item]
                       , playerName    :: String
                       , points        :: Number
+                      , skills        :: [Skill]
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
@@ -40,6 +41,7 @@ initialState pname = Game
         , items: [testItem1, testItem2]
         , playerName: pname
         , points: 0
+        , skills: defaultSkills
         , inventory: []
         , freeFallTimer: 0
         , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
@@ -62,7 +64,7 @@ addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
-    drawGame console <<< updateWorld (calcSpeed g state.player) $ Game state { freeFallTimer = 0 }
+    drawGame console <<< updateWorld (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
     drawGame console $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
@@ -174,8 +176,8 @@ updateCreatures advance g@(Game state') =
 
         -- Updates creature at index i until it runs out of time.
         updateCreature :: Number -> GameState -> GameState
-        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcSpeed game) =
-            updateCreature i (modifyCreatureAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game c }))
+        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcSpeed game []) =
+            updateCreature i (modifyCreatureAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game [] c }))
         updateCreature i game | otherwise = game
 
         -- Creature at index i does a single action.
@@ -239,15 +241,30 @@ isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 isClimbable :: Level -> Point -> Boolean
 isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
 
--- todo: item weight should affect player
-calcSpeed :: GameState -> Creature -> Number
-calcSpeed (Game state) c | inFreeFall state.level c = 500
-calcSpeed (Game state) c | otherwise                = c.speed
+carryingWeight :: [Item] -> Number
+carryingWeight [] = 0
+carryingWeight (x:xs) = x.weight + (carryingWeight xs)
+
+maxCarryingCapacity :: Creature -> Number
+maxCarryingCapacity c = c.stats.str * 5 + 10
+
+calcSpeed :: GameState -> [Item] -> Creature -> Number
+calcSpeed (Game state) inv c | inFreeFall state.level c = 500
+calcSpeed (Game state) []  c                            = c.speed - (c.stats.dex - 10) * 25
+calcSpeed (Game state) inv c | otherwise                = c.speed - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
+    where
+        deltaWeight :: Number -> Number
+        deltaWeight n | n < 40.0 = 0
+        deltaWeight n | n < 60.0 = 50
+        deltaWeight n | n < 80.0 = 150
+        deltaWeight n | n < 90.0 = 200
+        deltaWeight n | n < 100.0 = 400
+        deltaWeight n | otherwise = 1000
 
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld (calcSpeed g state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+        updateWorld (calcSpeed g state.inventory state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
         else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         newpos  = state.player.pos .+. delta
