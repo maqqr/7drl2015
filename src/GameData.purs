@@ -9,6 +9,10 @@ type Point = { x :: Number, y :: Number }
 (.+.) {x = x1, y = y1} {x = x2, y=y2} = {x: x1+x2, y: y1+y2}
 infixl 9 .+.
 
+(.-.) :: Point -> Point -> Point
+(.-.) {x = x1, y = y1} {x = x2, y=y2} = {x: x1-x2, y: y1-y2}
+infixl 9 .-.
+
 (.==.) :: Point -> Point -> Boolean
 (.==.) {x = x1, y = y1} {x = x2, y = y2} = x1 == x2 && y1 == y2
 

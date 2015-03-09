@@ -73,52 +73,71 @@ onUpdate console _ g = drawGame console g
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game state) = do
     clear console
-    mapM_ (\p -> drawTile p (getTile state.level p)) (levelPoints state.level)
-    mapM_ drawCreature state.npcs
-    mapM_ drawItem state.items
-    drawCreature state.player
+    let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
+    mapM_ (\p -> drawTile (drawChar' p) (getTile state.level (p .-. offset))) viewportPoints
+    mapM_ (drawCreature offset) state.npcs
+    mapM_ (drawItem offset) state.items
+    drawCreature offset state.player
     drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
     drawStrings {x: 1, y: 20} "FFFFFF" state.messageBuf
     return g
     where
+        viewportPoints :: [Point]
+        viewportPoints = do
+            x' <- 0 .. 79
+            y' <- 0 .. 19
+            return {x: x', y: y'}
+
+        pointsAroundPlayer :: Number -> [Point]
+        pointsAroundPlayer r = do
+            x' <- (state.player.pos.x - r) .. (state.player.pos.x + r)
+            y' <- (state.player.pos.y - r) .. (state.player.pos.y + r)
+            return {x: x', y: y'}
+
         drawStrings :: Point -> String -> [String] -> ConsoleEff Unit
         drawStrings p col (x:xs) = drawString console x col p.x p.y
                                 >> drawStrings {x: p.x, y: p.y + 1} col xs
         drawStrings _  _  []     = return unit
 
-        drawCreature :: Creature -> ConsoleEff Unit
-        drawCreature c = drawCreatureType c.pos c.ctype
+        drawChar' :: Point -> String -> String -> ConsoleEff Unit
+        drawChar' pos c col = drawChar console c col pos.x pos.y
 
-        drawCreatureType :: Point -> CreatureType -> ConsoleEff Unit
-        drawCreatureType p Player  = drawChar console "@" "FF0000" p.x p.y
-        drawCreatureType p Guard   = drawChar console "G" "0000FF" p.x p.y
-        drawCreatureType p Archer  = drawChar console "A" "00FF00" p.x p.y
-        drawCreatureType p Peasant = drawChar console "P" "AAAAFF" p.x p.y
-        drawCreatureType p _       = drawChar console "?" "FFFFFF" p.x p.y
+        drawCreature :: Point -> Creature -> ConsoleEff Unit
+        drawCreature offset c = drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
 
-        drawItem :: Item -> ConsoleEff Unit
-        drawItem i = drawItemType i.pos i.itemType
+        drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
+        drawCreatureType d Player  = d "@" "FF0000"
+        drawCreatureType d Guard   = d "G" "0000FF"
+        drawCreatureType d Archer  = d "A" "00FF00"
+        drawCreatureType d Peasant = d "P" "AAAAFF"
+        drawCreatureType d _       = d "?" "FFFFFF"
 
-        drawItemType :: Point -> ItemType -> ConsoleEff Unit
-        drawItemType p (Loot _)   = drawChar console "$" "FFAA00" p.x p.y
-        drawItemType p (Weapon _) = drawChar console "/" "AAAAAA" p.x p.y
+        fromCode :: Number -> String
+        fromCode = singleton <<< fromCharCode
 
-        drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
-        drawTile p (Just Air)        = drawChar console " " "FFFFFF" p.x p.y
-        drawTile p (Just Ground)     = drawChar console (singleton $ fromCharCode 176) "AAAAAA" p.x p.y
-        drawTile p (Just Grass)      = drawChar console (singleton $ fromCharCode 176) "009900" p.x p.y
-        drawTile p (Just Wall)       = drawChar console (singleton $ fromCharCode 219) "444422" p.x p.y
-        drawTile p (Just SWall)      = drawChar console (singleton $ fromCharCode 219) "444422" p.x p.y
-        drawTile p (Just DoorLocked) = drawChar console "+" "666633" p.x p.y
-        drawTile p (Just DoorClosed) = drawChar console "+" "666633" p.x p.y
-        drawTile p (Just DoorOpen)   = drawChar console "|" "666633" p.x p.y
-        drawTile p (Just BgCave)     = drawChar console (singleton $ fromCharCode 176) "484848" p.x p.y
-        drawTile p (Just BgHouse)    = drawChar console (singleton $ fromCharCode 219) "0D0D0D" p.x p.y
-        drawTile p (Just Bush)       = drawChar console (singleton $ fromCharCode 172) "009900" p.x p.y
-        drawTile p (Just Stairs)     = drawChar console "<" "FFFFFF" p.x p.y
-        drawTile p _                 = drawChar console "?" "FFFFFF" p.x p.y
+        drawItem :: Point -> Item -> ConsoleEff Unit
+        drawItem offset i = drawItemType (drawChar' (i.pos .+. offset)) i.itemType
+
+        drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
+        drawItemType d (Loot _)   = d "$" "FFAA00"
+        drawItemType d (Weapon _) = d "/" "AAAAAA"
+
+        drawTile :: forall a. (String -> String -> a) -> Maybe Tile -> a
+        drawTile d (Just Air)        = d " " "FFFFFF"
+        drawTile d (Just Ground)     = d (fromCode 176) "AAAAAA"
+        drawTile d (Just Grass)      = d (fromCode 176) "009900"
+        drawTile d (Just Wall)       = d (fromCode 219) "444422"
+        drawTile d (Just SWall)      = d (fromCode 219) "444422"
+        drawTile d (Just DoorLocked) = d "+" "666633"
+        drawTile d (Just DoorClosed) = d "+" "666633"
+        drawTile d (Just DoorOpen)   = d "|" "666633"
+        drawTile d (Just BgCave)     = d (fromCode 176) "484848"
+        drawTile d (Just BgHouse)    = d (fromCode 219) "0D0D0D"
+        drawTile d (Just Bush)       = d (fromCode 172) "009900"
+        drawTile d (Just Stairs)     = d "<" "FFFFFF"
+        drawTile d _                 = d "?" "FFFFFF"
 drawGame console MainMenu = do
     clear console
     drawString console "RobberyRL" "FFFFFF" 12 5
@@ -209,9 +228,11 @@ move (Game state) c delta =
     where
         newpos  = clampPos $ c.pos .+. delta
         blocked = not $ isValidMove state.level newpos
+        w (Level level) = level.width
+        h (Level level) = level.height
 
         clampPos :: Point -> Point
-        clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
+        clampPos pos = { x: clamp pos.x 0 (w state.level - 1), y: clamp pos.y 0 (h state.level - 1) }
 
 updateWorld :: Number -> GameState -> GameState
 updateWorld advance = updateCreatures advance >>> updatePlayerPhysics >>> updateItemPhysics
