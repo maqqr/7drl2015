@@ -15,6 +15,7 @@ import Graphics.CanvasConsole
 import GameData
 import Utils
 import Level
+import Line
 
 strlen = Data.String.length
 

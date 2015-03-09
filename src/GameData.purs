@@ -12,6 +12,10 @@ infixl 9 .+.
 (.==.) :: Point -> Point -> Boolean
 (.==.) {x = x1, y = y1} {x = x2, y = y2} = x1 == x2 && y1 == y2
 
+showPoint :: Point -> String
+showPoint p = "(" ++ show p.x ++ ", " ++ show p.y ++ ")"
+
+
 zerop :: Point
 zerop = {x: 0, y: 0}
 
