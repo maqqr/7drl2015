@@ -211,8 +211,8 @@ updateWorld advance = updateCreatures advance
     >>> (\(Game state) -> Game state { player = updatePhysics (Game state) state.player })
     >>> (\(Game state) -> Game state { items = map (updatePhysics (Game state)) state.items })
 
-inFreeFall :: forall r. Level -> { pos :: Point | r } -> Boolean
-inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1})
+inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
+inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
 
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
@@ -232,7 +232,7 @@ movePlayer delta g@(Game state) =
         canMove = isValidMove state.level newpos
 
 jump :: GameState -> Number -> Creature -> Creature
-jump g xdir c = move g (c { vel = {x: xdir, y: -2} }) {x: xdir, y: -1}
+jump g xdir c = c { vel = {x: xdir, y: -2} }
 
 movementkeys :: M.Map Number Point
 movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
