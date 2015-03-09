@@ -274,6 +274,7 @@ movePlayer delta g@(Game state) =
 
         checkTile :: Tile -> GameState
         checkTile DoorLocked = addMsg "The door is locked. You pick the lock." g
+        checkTile _          = g
 
 playerJump :: GameState -> Number -> GameState
 playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {x: xdir, y: -1}) && not (isValidMove state.level (state.player.pos .+. {x: xdir, y: 0})) =
