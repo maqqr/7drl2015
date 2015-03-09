@@ -248,10 +248,13 @@ movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
         updateWorld (calcSpeed g state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
-        else Game state
+        else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
+
+        checkTile :: Tile -> GameState
+        checkTile DoorLocked = addMsg "The door is locked. You pick the lock." g
 
 playerJump :: GameState -> Number -> GameState
 playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {x: xdir, y: -1}) && not (isValidMove state.level (state.player.pos .+. {x: xdir, y: 0})) =
