@@ -48,9 +48,9 @@ initialState pname = Game
         }
     where
         pl :: Creature
-        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0, vel: zerop }
+        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop }
 
-        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0, vel: zerop }
+        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
@@ -109,6 +109,7 @@ drawGame console g@(Game state) = do
         drawTile p (Just Ground)     = drawChar console (singleton $ fromCharCode 176) "AAAAAA" p.x p.y
         drawTile p (Just Grass)      = drawChar console (singleton $ fromCharCode 176) "009900" p.x p.y
         drawTile p (Just Wall)       = drawChar console (singleton $ fromCharCode 219) "444422" p.x p.y
+        drawTile p (Just SWall)      = drawChar console (singleton $ fromCharCode 219) "444422" p.x p.y
         drawTile p (Just DoorLocked) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorClosed) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorOpen)   = drawChar console "|" "666633" p.x p.y
@@ -250,8 +251,8 @@ maxCarryingCapacity c = c.stats.str * 5 + 10
 
 calcSpeed :: GameState -> [Item] -> Creature -> Number
 calcSpeed (Game state) inv c | inFreeFall state.level c = 500
-calcSpeed (Game state) []  c                            = c.speed - (c.stats.dex - 10) * 25
-calcSpeed (Game state) inv c | otherwise                = c.speed - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
+calcSpeed (Game state) []  c                            = 1000 - (c.stats.dex - 10) * 25
+calcSpeed (Game state) inv c | otherwise                = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
     where
         deltaWeight :: Number -> Number
         deltaWeight n | n < 40.0 = 0

@@ -9,7 +9,8 @@ import Data.Maybe
 import GameData
 import Utils
 
-data Tile = Air | Ground | Grass | Wall 
+data Tile = Air
+          | Ground     | Grass      | Wall     | SWall
           | DoorLocked | DoorClosed | DoorOpen
           | BgCave     | BgHouse
           | Bush       | Stairs
@@ -24,6 +25,7 @@ isTileSolid :: Tile -> Boolean
 isTileSolid Ground     = true
 isTileSolid Grass      = true
 isTileSolid Wall       = true
+isTileSolid SWall      = true
 isTileSolid DoorLocked = true
 isTileSolid DoorClosed = true
 isTileSolid _          = false
@@ -32,6 +34,7 @@ isTileTransparent :: Tile -> Boolean
 isTileTransparent Ground     = false
 isTileTransparent Grass      = false
 isTileTransparent Wall       = false
+isTileTransparent SWall      = false
 isTileTransparent DoorLocked = false
 isTileTransparent DoorClosed = false
 isTileTransparent Bush       = false
@@ -72,6 +75,7 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile c | c == makeChar "#" = Ground
         charToTile c | c == makeChar "G" = Grass
         charToTile c | c == makeChar "S" = Wall
+        charToTile c | c == makeChar "W" = SWall
         charToTile c | c == makeChar "*" = DoorLocked
         charToTile c | c == makeChar "+" = DoorClosed
         charToTile c | c == makeChar "|" = DoorOpen
@@ -114,16 +118,16 @@ testLevel =
     ,"................................................................................"
     ,"................................................................................"
     ,"................................................................................"
-    ,"..............................................#....#....#..#...###......#######."
-    ,".............................................#.............##........##........."
-    ,"............................................#<..#.......####...................."
-    ,".........................................#.#.<..#..............................."
-    ,"........................................#....<.##..............................."
-    ,".......................................#.....<..##.....##......................."
-    ,"#..........B.............SSSSSSSS.....#.....#<..#...................#....#....##"
-    ,"#...GGGGGGGGGG...........SCCCCCCS....##......<.......#.........................."
-    ,"#cc############cccc#.....SCCCSCCS.#..........<.................................."
-    ,"#cc############cccc###...|CCC*CC|............<...........B......................"
-    ,"cc#############cccc###GGG####+###..#####...GGGGGGG......GGG....................."
-    ,"cccccccccccccccccccccccccccccc####################GGGGGG######.................."
+    ,"..............................................#..cc#..cc#..#..c###...ccc#######."
+    ,".............................................#ccccccccccccc##cccccccc##ccccccccc"
+    ,"............................................#<cc#ccccccc####cccccccccccccccccccc"
+    ,".........................................#.#c<cc#ccccccccccccccccccccccccccccccc"
+    ,"........................................#cccc<c##ccccccccccccccccccccccccccccccc"
+    ,".......................................#ccccc<cc##ccccc##ccccccccccccccccccccccc"
+    ,"#..........B.............SSSWSSSS.....#ccccc#<cc#ccccccccccccccccccc#cccc#cccc##"
+    ,"#...GGGGGGGGGG...........SCCCCCCS....##cccccc<ccccccc#cccccccccccccccccccccccccc"
+    ,"#cc############cccc#.....SCCCSCCS.#.ccccccccc<cccccccccccBcccccccccccccccccccccc"
+    ,"#cc############cccc###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
+    ,"cc#############cccc###GGG####+###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
+    ,"cccccccccccccccccccccccccccccc####################GGGGGG######cccccccccccccccccc"
     ,"################################################################################"]
