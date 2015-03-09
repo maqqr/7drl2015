@@ -1,6 +1,7 @@
 module GameData where
 
 import Data.String
+import Utils
 
 type Point = { x :: Number, y :: Number }
 
@@ -10,6 +11,12 @@ infixl 9 .+.
 
 (.==.) :: Point -> Point -> Boolean
 (.==.) {x = x1, y = y1} {x = x2, y = y2} = x1 == x2 && y1 == y2
+
+zero :: Point
+zero = {x: 0, y: 0}
+
+unitp :: Point -> Point
+unitp p = {x: sign p.x, y: sign p.y}
 
 type Stats = { hp :: Number }
 
@@ -28,21 +35,17 @@ instance eqCT :: Eq CreatureType where
     (/=) a b = show a /= show b
 
 
-type Physics =
-    { vel :: Point   -- Velocity
-    , jump :: Number -- Jump power
-    }
-
 type Creature =
     { pos   :: Point
     , ctype :: CreatureType
     , stats :: Stats
     , speed :: Number
     , time  :: Number
+    , vel   :: Point
     }
 
 data ItemType = Loot   { value :: Number }
               | Weapon { dmg :: Number, attackBonus :: Number }
 
-type Item = { itemType :: ItemType, pos :: Point, weight :: Number }
+type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number }
 
