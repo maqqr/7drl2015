@@ -105,10 +105,14 @@ drawGame console g@(Game state) = do
         drawTile :: Point -> Maybe Tile -> ConsoleEff Unit
         drawTile p (Just Air)        = drawChar console " " "FFFFFF" p.x p.y
         drawTile p (Just Ground)     = drawChar console (singleton $ fromCharCode 176) "AAAAAA" p.x p.y
+        drawTile p (Just Grass)      = drawChar console (singleton $ fromCharCode 176) "009900" p.x p.y
         drawTile p (Just Wall)       = drawChar console (singleton $ fromCharCode 219) "444422" p.x p.y
         drawTile p (Just DoorLocked) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorClosed) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorOpen)   = drawChar console "|" "666633" p.x p.y
+        drawTile p (Just BgCave)     = drawChar console (singleton $ fromCharCode 176) "383838" p.x p.y
+        drawTile p (Just BgHouse)    = drawChar console (singleton $ fromCharCode 219) "0D0D0D" p.x p.y
+        drawTile p (Just Bush)       = drawChar console (singleton $ fromCharCode 172) "009900" p.x p.y
         drawTile p _                 = drawChar console "?" "FFFFFF" p.x p.y
 drawGame console MainMenu = do
     clear console
