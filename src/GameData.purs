@@ -12,8 +12,8 @@ infixl 9 .+.
 (.==.) :: Point -> Point -> Boolean
 (.==.) {x = x1, y = y1} {x = x2, y = y2} = x1 == x2 && y1 == y2
 
-zero :: Point
-zero = {x: 0, y: 0}
+zerop :: Point
+zerop = {x: 0, y: 0}
 
 unitp :: Point -> Point
 unitp p = {x: sign p.x, y: sign p.y}

@@ -46,9 +46,9 @@ initialState pname = Game
         }
     where
         pl :: Creature
-        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0, vel: zero }
+        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, speed: 1000, time: 0, vel: zerop }
 
-        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0, vel: zero }
+        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0, vel: zerop }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 6, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
@@ -194,7 +194,7 @@ updatePhysics g@(Game state) c | inFreeFall state.level c = move g fc (unitp fc.
         fc = c { vel = { x: finalVelX, y: gc.vel.y } }
 
 
-updatePhysics _ c = c { vel = zero}
+updatePhysics _ c = c { vel = zerop }
 
 move :: forall r. GameState -> { pos :: Point | r } -> Point -> { pos :: Point | r }
 move (Game state) c delta =
