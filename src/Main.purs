@@ -110,9 +110,10 @@ drawGame console g@(Game state) = do
         drawTile p (Just DoorLocked) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorClosed) = drawChar console "+" "666633" p.x p.y
         drawTile p (Just DoorOpen)   = drawChar console "|" "666633" p.x p.y
-        drawTile p (Just BgCave)     = drawChar console (singleton $ fromCharCode 176) "383838" p.x p.y
+        drawTile p (Just BgCave)     = drawChar console (singleton $ fromCharCode 176) "484848" p.x p.y
         drawTile p (Just BgHouse)    = drawChar console (singleton $ fromCharCode 219) "0D0D0D" p.x p.y
         drawTile p (Just Bush)       = drawChar console (singleton $ fromCharCode 172) "009900" p.x p.y
+        drawTile p (Just Stairs)     = drawChar console "<" "FFFFFF" p.x p.y
         drawTile p _                 = drawChar console "?" "FFFFFF" p.x p.y
 drawGame console MainMenu = do
     clear console
@@ -209,16 +210,22 @@ move (Game state) c delta =
         clampPos pos = { x: clamp pos.x 0 79, y: clamp pos.y 0 24 }
 
 updateWorld :: Number -> GameState -> GameState
-updateWorld advance = updateCreatures advance
-    >>> (\(Game state) -> Game state { player = updatePhysics (Game state) state.player })
-    >>> (\(Game state) -> Game state { items = map (updatePhysics (Game state)) state.items })
+updateWorld advance = updateCreatures advance >>> updatePlayerPhysics >>> updateItemPhysics
+    where
+        updatePlayerPhysics (Game state) | isClimbable state.level state.player.pos =
+            Game state
+        updatePlayerPhysics (Game state) | otherwise =
+            Game state { player = updatePhysics (Game state) state.player }
+
+        updateItemPhysics (Game state) = Game state { items = map (updatePhysics (Game state)) state.items }
 
 inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
 
 canGrab :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
-canGrab level c = isFree {x:0, y: 1} && (ledge (-1) || ledge 1)
+canGrab level c = climb || (isFree {x:0, y: 1} && (ledge (-1) || ledge 1))
     where
+        climb = isClimbable level c.pos
         ledge dx = isFree {x: dx, y: -1} && blocked {x: dx, y: 0}
         isFree delta  = isValidMove level (c.pos .+. delta)
         blocked = not <<< isFree
@@ -228,6 +235,9 @@ playerCannotAct level c = inFreeFall level c && not (canGrab level c)
 
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
+
+isClimbable :: Level -> Point -> Boolean
+isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
 
 -- todo: item weight should affect player
 calcSpeed :: GameState -> Creature -> Number
@@ -245,6 +255,8 @@ movePlayer delta g@(Game state) =
 
 playerJump :: GameState -> Number -> GameState
 playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {x: xdir, y: -1}) && not (isValidMove state.level (state.player.pos .+. {x: xdir, y: 0})) =
+    movePlayer {x: xdir, y: -1} g
+playerJump g@(Game state) xdir | isClimbable state.level (state.player.pos .+. {x: xdir, y: -1}) =
     movePlayer {x: xdir, y: -1} g
 playerJump g@(Game state) xdir | otherwise =
     Game state { player = state.player { vel = {x: xdir, y: -3} } }

@@ -12,7 +12,7 @@ import Utils
 data Tile = Air | Ground | Grass | Wall 
           | DoorLocked | DoorClosed | DoorOpen
           | BgCave     | BgHouse
-          | Bush
+          | Bush       | Stairs
 
 data Level = Level
     { width  :: Number
@@ -21,30 +21,25 @@ data Level = Level
     }
 
 isTileSolid :: Tile -> Boolean
-isTileSolid Air        = false
 isTileSolid Ground     = true
 isTileSolid Grass      = true
 isTileSolid Wall       = true
 isTileSolid DoorLocked = true
 isTileSolid DoorClosed = true
-isTileSolid DoorOpen   = false
-isTileSolid BgCave     = false
-isTileSolid BgHouse    = false
-isTileSolid Bush       = false
 isTileSolid _          = false
 
 isTileTransparent :: Tile -> Boolean
-isTileTransparent Air        = true
 isTileTransparent Ground     = false
 isTileTransparent Grass      = false
 isTileTransparent Wall       = false
 isTileTransparent DoorLocked = false
 isTileTransparent DoorClosed = false
-isTileTransparent DoorOpen   = true
-isTileTransparent BgCave     = true
-isTileTransparent BgHouse    = true
 isTileTransparent Bush       = false
 isTileTransparent _          = true
+
+isTileClimbable :: Tile -> Boolean
+isTileClimbable Stairs = true
+isTileClimbable _      = false
 
 newLevel :: Number -> Number -> Level
 newLevel w h = Level { width: w, height: h, tiles: replicate (w * h) Air }
@@ -83,6 +78,7 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile c | c == makeChar "c" = BgCave
         charToTile c | c == makeChar "C" = BgHouse
         charToTile c | c == makeChar "B" = Bush
+        charToTile c | c == makeChar "<" = Stairs
         charToTile _ = Air
 
 
@@ -120,14 +116,14 @@ testLevel =
     ,"................................................................................"
     ,"..............................................#....#....#..#...###......#######."
     ,".............................................#.............##........##........."
-    ,"............................................#...#.......####...................."
-    ,".........................................#.#....#..............................."
-    ,"........................................#......##..............................."
-    ,".......................................#........##.....##......................."
-    ,"#..........B.............SSSSSSSS.....#.....#...#...................#....#....##"
-    ,"#...GGGGGGGGGG...........SCCCCCCS....##..............#.........................."
-    ,"#cc############cccc#.....SCCCSCCS.#............................................."
-    ,"#cc############cccc###...|CCC*CC|........................B......................"
+    ,"............................................#<..#.......####...................."
+    ,".........................................#.#.<..#..............................."
+    ,"........................................#....<.##..............................."
+    ,".......................................#.....<..##.....##......................."
+    ,"#..........B.............SSSSSSSS.....#.....#<..#...................#....#....##"
+    ,"#...GGGGGGGGGG...........SCCCCCCS....##......<.......#.........................."
+    ,"#cc############cccc#.....SCCCSCCS.#..........<.................................."
+    ,"#cc############cccc###...|CCC*CC|............<...........B......................"
     ,"cc#############cccc###GGG####+###..#####...GGGGGGG......GGG....................."
     ,"cccccccccccccccccccccccccccccc####################GGGGGG######.................."
     ,"################################################################################"]
