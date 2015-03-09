@@ -55,7 +55,6 @@ type Creature =
     { pos   :: Point
     , ctype :: CreatureType
     , stats :: Stats
-    , speed :: Number
     , time  :: Number
     , vel   :: Point
     }
