@@ -271,6 +271,7 @@ onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _ | playerCannotAct state.level state.player = return g
 onKeyPress console g@(Game state) key                      | key == numpad 7 = return $ playerJump g (-1)
 onKeyPress console g@(Game state) key                      | key == numpad 9 = return $ playerJump g 1
+onKeyPress console g@(Game state) key                      | key == numpad 8 = return $ playerJump g 0
 onKeyPress console g@(Game state) key                      | key == 80       = return $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
