@@ -50,7 +50,7 @@ initialState pname = Game
 
         testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, speed: 500, time: 0, vel: zerop }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
-        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 6, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
+        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
 messageBufSize :: Number
 messageBufSize = 4
@@ -260,7 +260,7 @@ onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _ | inFreeFall state.level state.player = return g
 onKeyPress console g@(Game state) key                      | key == numpad 7 = return $ Game state { player = jump g (-1) state.player }
 onKeyPress console g@(Game state) key                      | key == numpad 9 = return $ Game state { player = jump g 1 state.player }
-onKeyPress console g@(Game state) key                      | key == 80       = return g
+onKeyPress console g@(Game state) key                      | key == 80       = return $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
