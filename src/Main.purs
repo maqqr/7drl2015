@@ -120,7 +120,6 @@ drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
-    trace $ (\c -> show (showPoint ((\(AI _ (Patrol p)) -> p) c.ai)) ++ show (showPoint c.pos)) $ fromMaybe state.player $ head state.npcs
     mapM_ (tileDrawer offset) viewportPoints
     mapM_ (drawItem offset) state.items
     mapM_ (drawCreature offset) state.npcs
