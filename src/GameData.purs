@@ -19,6 +19,11 @@ infixl 9 .-.
 showPoint :: Point -> String
 showPoint p = "(" ++ show p.x ++ ", " ++ show p.y ++ ")"
 
+manhattanDistance :: Point -> Point -> Number
+manhattanDistance {x = x1, y = y1} {x = x2, y=y2} = abs (x1 - x2) + abs (y1 - y2)
+
+distanceSq :: Point -> Point -> Number
+distanceSq {x = x1, y = y1} {x = x2, y=y2} = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
 
 zerop :: Point
 zerop = {x: 0, y: 0}

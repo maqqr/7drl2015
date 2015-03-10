@@ -134,8 +134,12 @@ drawGame console g@(Game state) = do
         drawItemType d (Weapon _) = d "/" "AAAAAA"
 
         drawTileWithFov :: forall a. Point -> (String -> String -> a) -> Maybe Tile -> a
-        drawTileWithFov p d t | lineOfSight state.level state.player.pos p = drawTile d t
-        drawTileWithFov p d t | otherwise = d (fromCode 178) "111111"
+        drawTileWithFov p d t | playerCanSee p = drawTile d t
+        drawTileWithFov p d t | otherwise      = d (fromCode 178) "111111"
+
+        playerCanSee :: Point -> Boolean
+        playerCanSee p | distanceSq state.player.pos p > 12 * 12 = false
+        playerCanSee p | otherwise = lineOfSight state.level state.player.pos p
 
         drawTile :: forall a. (String -> String -> a) -> Maybe Tile -> a
         drawTile d (Just Air)        = d (fromCode 176) "002456"

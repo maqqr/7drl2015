@@ -17,6 +17,10 @@ clamp x min max | x < min = min
 clamp x min max | x > max = max
 clamp x min max = x
 
+abs :: Number -> Number
+abs x | x < 0     = -x
+abs x | otherwise =  x
+
 sign :: Number -> Number
 sign x | x < 0     = -1
 sign x | x > 0     =  1
