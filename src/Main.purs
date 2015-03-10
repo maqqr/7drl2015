@@ -75,9 +75,9 @@ addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf 
 
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
-    drawGame console <<< updateWorld (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
+    drawGame console <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
-    drawGame console $ Game state { freeFallTimer = state.freeFallTimer + dt }
+    return $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
@@ -85,8 +85,8 @@ drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
     mapM_ (tileDrawer offset) viewportPoints
-    mapM_ (drawCreature offset) state.npcs
     mapM_ (drawItem offset) state.items
+    mapM_ (drawCreature offset) state.npcs
     drawCreature offset state.player
     drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
@@ -120,7 +120,8 @@ drawGame console g@(Game state) = do
         drawChar' pos c col = drawChar console c col pos.x pos.y
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
-        drawCreature offset c = drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
+        drawCreature offset c | playerCanSee c.pos = drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
+        drawCreature offset c | otherwise          = return unit
 
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
         drawCreatureType d Player  = d "@" "FF0000"
@@ -133,7 +134,8 @@ drawGame console g@(Game state) = do
         fromCode = singleton <<< fromCharCode
 
         drawItem :: Point -> Item -> ConsoleEff Unit
-        drawItem offset i = drawItemType (drawChar' (i.pos .+. offset)) i.itemType
+        drawItem offset i | playerCanSee i.pos = drawItemType (drawChar' (i.pos .+. offset)) i.itemType
+        drawItem offset i | otherwise          = return unit
 
         drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
         drawItemType d (Loot _)   = d "$" "FFAA00"
@@ -271,8 +273,9 @@ move (Game state) c delta =
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 (w state.level - 1), y: clamp pos.y 0 (h state.level - 1) }
 
-updateWorld :: Number -> GameState -> GameState
-updateWorld advance = updateCreatures advance >>> updatePlayerPhysics >>> updateItemPhysics
+updateWorld :: Boolean -> Number -> GameState -> GameState
+updateWorld updatePlayer advance =
+    updateCreatures advance >>> (if updatePlayer then updatePlayerPhysics else id) >>> updateItemPhysics
     where
         updatePlayerPhysics (Game state) | isClimbable state.level state.player.pos =
             Game state
@@ -325,7 +328,7 @@ calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.d
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld (calcSpeed g state.inventory state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+        updateWorld false (calcSpeed g state.inventory state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
         else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         newpos  = state.player.pos .+. delta
@@ -336,6 +339,8 @@ movePlayer delta g@(Game state) =
         checkTile _          = g
 
 playerJump :: GameState -> Number -> GameState
+playerJump g@(Game state) xdir | not (isValidMove state.level (state.player.pos .+. {x: xdir, y: -1})) =
+    movePlayer {x: xdir, y: -1} g
 playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {x: xdir, y: -1}) && not (isValidMove state.level (state.player.pos .+. {x: xdir, y: 0})) =
     movePlayer {x: xdir, y: -1} g
 playerJump g@(Game state) xdir | isClimbable state.level (state.player.pos .+. {x: xdir, y: -1}) =
@@ -348,7 +353,9 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
                           ,numpad 2 // {x:  0, y:  1}
                           ,numpad 4 // {x: -1, y:  0}
                           ,numpad 6 // {x:  1, y:  0}
-                          ,numpad 5 // {x:  0, y:  0}]
+                          ,numpad 5 // {x:  0, y:  0}
+                          ,numpad 1 // {x: -1, y:  1}
+                          ,numpad 3 // {x:  1, y:  1}]
 
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
@@ -366,11 +373,11 @@ pickUp point (Game state) =
         addItem xs x = x:xs
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
-onKeyPress console g@(Game state) _ | playerCannotAct state.level state.player = return g
-onKeyPress console g@(Game state) key                      | key == numpad 7 = return $ playerJump g (-1)
-onKeyPress console g@(Game state) key                      | key == numpad 9 = return $ playerJump g 1
-onKeyPress console g@(Game state) key                      | key == numpad 8 = return $ playerJump g 0
-onKeyPress console g@(Game state) key                      | key == 80       = return $ pickUp (state.player.pos) g
+onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
+onKeyPress console g@(Game state) key | key == numpad 7 = drawGame console $ playerJump g (-1)
+onKeyPress console g@(Game state) key | key == numpad 9 = drawGame console $ playerJump g 1
+onKeyPress console g@(Game state) key | key == numpad 8 = drawGame console $ playerJump g 0
+onKeyPress console g@(Game state) key | key == 80       = drawGame console $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g

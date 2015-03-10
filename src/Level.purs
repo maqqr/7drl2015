@@ -167,6 +167,6 @@ testLevel =
     ,"#...GGGGGGGGGG...........SCCCCCCS....##cccccc<ccccccc#cccccccccccccccccccccccccc"
     ,"#==############====#.....SCCCSCCS.#.ccccccccc<cccccccccccBcccccccccccccccccccccc"
     ,"#==############====###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
-    ,"==#############====###GGG####+###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
+    ,"==#############====###GGG####*###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
     ,"==============================####################GGGGGG######cccccccccccccccccc"
     ,"################################################################################"]
