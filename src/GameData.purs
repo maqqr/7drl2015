@@ -2,6 +2,7 @@ module GameData where
 
 import Data.String
 import Utils
+import Math
 
 type Point = { x :: Number, y :: Number }
 

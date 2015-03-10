@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Control.Monad.Eff
 import qualified Control.Monad.JQuery as J
 import Debug.Trace
+import Math
 
 import Graphics.CanvasConsole
 import GameData
@@ -36,6 +37,7 @@ data GameState = Game { level         :: Level
                       , messageBuf    :: [String]
                       , pathfinder    :: Pathfinder
                       , window        :: GameWindow
+                      , seed          :: Number
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -55,15 +57,33 @@ initialState pname = Game
         , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
         , pathfinder: makePathfinder (levelWeights lvl)
         , window: GameW
+        , seed: 456977
         }
     where
         lvl = stringToLevel testLevel
 
         pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
-        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
+        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Patrol {x: 10, y: 20}) }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
+
+generate :: GameState -> { n :: Number, game :: GameState }
+generate (Game state) =
+    let new = (a * state.seed + c) % m in { n: new, game: Game state { seed = new } }
+    where
+        a = 0x343FD
+        c = 0x269EC
+        m = pow 32 2
+
+randInt :: Number -> Number -> GameState -> { n :: Number, game :: GameState }
+randInt min' max' g = let gg = generate g in  gg { n = min' + (gg.n % (max' - min')) }
+
+randomPoint :: GameState -> { p :: Point, game :: GameState }
+randomPoint g@(Game { level = (Level level) }) =
+    let x = randInt 0 level.width g
+        y = randInt 0 level.height x.game
+    in { p: {x: x.n, y: y.n}, game: y.game }
 
 messageBufSize :: Number
 messageBufSize = 4
@@ -100,6 +120,7 @@ drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
+    trace $ (\c -> show (showPoint ((\(AI _ (Patrol p)) -> p) c.ai)) ++ show (showPoint c.pos)) $ fromMaybe state.player $ head state.npcs
     mapM_ (tileDrawer offset) viewportPoints
     mapM_ (drawItem offset) state.items
     mapM_ (drawCreature offset) state.npcs
@@ -170,6 +191,7 @@ drawGame console g@(Game state) = do
         drawTileWithFov p d t | otherwise      = d (fromCode 178) "111111"
 
         playerCanSee :: Point -> Boolean
+        playerCanSee p = true
         playerCanSee p | distanceSq state.player.pos p > 12 * 12 = false
         playerCanSee p | otherwise = lineOfSight state.level state.player.pos p
 
@@ -255,8 +277,9 @@ updateCreatures advance g@(Game state') =
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
         updateCreatureOnce i g@(Game state) =
-            let newAlert = updateAlertness (get i g NoAI (\c -> c.ai))
-            in  modifyCreatureAt i (updateAI newAlert) (\c -> c { ai = newAlert }) -- add updatePhysics?
+            let newAlertAI   = updateAlertness (get i g NoAI (\c -> c.ai))
+                changedAlert = modifyCreatureAt i g (\c ->c { ai = newAlertAI })
+            in updateAI changedAlert newAlertAI -- add updatePhysics?
             where
                 -- Creature position
                 cpos :: Point
@@ -264,9 +287,6 @@ updateCreatures advance g@(Game state') =
 
                 canSeePlayer :: Boolean
                 canSeePlayer = lineOfSight state.level cpos state.player.pos
-
-                setAlertness :: AIState -> Alertness -> GameState
-                setAlertness st a = modifyCreatureAt i g $ \c -> c { ai = AI a st }
 
                 updateAlertness :: AI -> AI
                 updateAlertness (AI NoAlert st)  | canSeePlayer = AI MightSee st
@@ -282,14 +302,26 @@ updateCreatures advance g@(Game state') =
                 updateAlertness (AI (Alert n) st) | otherwise    = AI (Alert (n - 1)) st
                 updateAlertness x = x
 
-                updateAI :: AI -> GameState
-                updateAI (AI (Alert _) _)      = modifyCreatureAt i g $ moveToPlayer
-                updateAI (AI (Suspicious _) _) = modifyCreatureAt i g $ moveToPlayer
-                updateAI (AI _ (Idle p))       = modifyCreatureAt i g $ moveToPoint p
-                updateAI (AI _ (Patrol p)) =
-                    if cpos .==. p then g -- todo: new partrol point
+                newPatrolPoint :: GameState -> { p :: Point, game :: GameState }
+                newPatrolPoint g' = let points = validPatrolPoints
+                                        gen    = randInt 0 (length points - 1) g'
+                                    in { p: fromMaybe zerop (points !! gen.n), game: gen.game }
+
+                validPatrolPoints :: [Point]
+                validPatrolPoints = filter canWalkOn $ levelPoints state.level
+                    where
+                        canWalkOn p = isValidMove state.level p && not (isValidMove state.level (p .+. {x: 0, y: 1}))
+
+                updateAI :: GameState -> AI -> GameState
+                updateAI g (AI (Alert _) _)      = modifyCreatureAt i g $ moveToPlayer
+                updateAI g (AI (Suspicious _) _) = modifyCreatureAt i g $ moveToPlayer
+                updateAI g (AI _ (Idle p))       = modifyCreatureAt i g $ moveToPoint p
+                updateAI g (AI a (Patrol p)) =
+                    if length (pathToPoint g cpos p) <= 2 then
+                        let gen = newPatrolPoint g
+                        in modifyCreatureAt i gen.game (\c -> c { ai = AI a (Patrol gen.p) })
                     else modifyCreatureAt i g $ moveToPoint p
-                updateAI _ = g
+                updateAI g _ = g
 
                 moveToPoint p c = case head (pathToPoint g c.pos p) of
                                    Just p'  -> c { pos = p' }
