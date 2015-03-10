@@ -20,6 +20,10 @@ import Line
 
 strlen = Data.String.length
 
+data GameWindow = GameW
+                | EquipW
+                | InventoryW
+
 data GameState = Game { level         :: Level
                       , player        :: Creature
                       , npcs          :: [Creature]
@@ -31,6 +35,7 @@ data GameState = Game { level         :: Level
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
                       , levelGraph    :: Graph
+                      , window        :: GameWindow
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -49,6 +54,7 @@ initialState pname = Game
         , freeFallTimer: 0
         , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
         , levelGraph: makeGraph (levelWeights lvl)
+        , window: GameW
         }
     where
         lvl = stringToLevel testLevel
@@ -153,6 +159,7 @@ drawGame console g@(Game state) = do
         drawTile d (Just BgCave)     = d (fromCode 176) "484848"
         drawTile d (Just BgHouse)    = d (fromCode 219) "222205"
         drawTile d (Just Bush)       = d (fromCode 172) "009900"
+        drawTile d (Just Water)      = d "=" "0000FF"
         drawTile d (Just Stairs)     = d "<" "FFFFFF"
         drawTile d _                 = d "?" "FFFFFF"
 drawGame console MainMenu = do

@@ -10,7 +10,7 @@ import GameData
 import Utils
 import Astar
 
-data Tile = Air
+data Tile = Air        | Water
           | Ground     | Grass      | Wall     | SWall
           | DoorLocked | DoorClosed | DoorOpen
           | BgCave     | BgHouse
@@ -39,10 +39,12 @@ isTileTransparent SWall      = false
 isTileTransparent DoorLocked = false
 isTileTransparent DoorClosed = false
 isTileTransparent Bush       = false
+isTileTransparent Water      = false
 isTileTransparent _          = true
 
 isTileClimbable :: Tile -> Boolean
 isTileClimbable Stairs = true
+isTileClimbable Water  = true
 isTileClimbable _      = false
 
 levelWeights :: Level -> [[Number]]
@@ -108,6 +110,7 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile c | c == makeChar "c" = BgCave
         charToTile c | c == makeChar "C" = BgHouse
         charToTile c | c == makeChar "B" = Bush
+        charToTile c | c == makeChar "=" = Water
         charToTile c | c == makeChar "<" = Stairs
         charToTile _ = Air
 
@@ -159,8 +162,8 @@ testLevel =
     ,".......................................#ccccc<cc##ccccc##ccccccccccccccccccccccc"
     ,"#..........B.............SSSWSSSS.....#ccccc#<cc#ccccccccccccccccccc#cccc#cccc##"
     ,"#...GGGGGGGGGG...........SCCCCCCS....##cccccc<ccccccc#cccccccccccccccccccccccccc"
-    ,"#cc############cccc#.....SCCCSCCS.#.ccccccccc<cccccccccccBcccccccccccccccccccccc"
-    ,"#cc############cccc###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
-    ,"cc#############cccc###GGG####+###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
-    ,"cccccccccccccccccccccccccccccc####################GGGGGG######cccccccccccccccccc"
+    ,"#==############====#.....SCCCSCCS.#.ccccccccc<cccccccccccBcccccccccccccccccccccc"
+    ,"#==############====###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
+    ,"==#############====###GGG####+###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
+    ,"==============================####################GGGGGG######cccccccccccccccccc"
     ,"################################################################################"]
