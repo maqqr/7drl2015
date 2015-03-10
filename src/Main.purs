@@ -81,6 +81,22 @@ onUpdate console dt g@(Game state) | otherwise =
 onUpdate console _ g = drawGame console g
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
+drawGame console g@(Game { window = EquipW }) = do
+    --TODO: drawing equipment window
+    return g
+drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
+    drawInventory inv 4 4
+    return g
+        where
+            drawItemInfo :: Item -> Number -> Number -> ConsoleEff Unit
+            drawItemInfo i x y = drawString console (showItem i) "AAAAAA" x y
+            drawItemInfo _ x y = drawString console "empty"      "AAAAAA" x y
+
+            drawInventory :: [Item] -> Number -> Number -> ConsoleEff Unit
+            drawInventory [] x y = drawString console "---" "AAAAAA" x y
+            drawInventory (i:is) x y = do
+                drawItemInfo i x y
+                drawInventory is x (y + 1)
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
@@ -161,9 +177,10 @@ drawGame console g@(Game state) = do
         drawTile d (Just BgCave)     = d (fromCode 176) "484848"
         drawTile d (Just BgHouse)    = d (fromCode 219) "222205"
         drawTile d (Just Bush)       = d (fromCode 172) "009900"
-        drawTile d (Just Water)      = d "=" "0000FF"
+        drawTile d (Just Water)      = d (fromCode 247) "0000FF"
         drawTile d (Just Stairs)     = d "<" "FFFFFF"
         drawTile d _                 = d "?" "FFFFFF"
+
 drawGame console MainMenu = do
     clear console
     drawString console "RobberyRL" "FFFFFF" 12 5
@@ -379,6 +396,8 @@ pickUp point (Game state) =
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
+onKeyPress console (Game state@{window = InventoryW }) key | key == 73 = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{window = GameW })      key | key == 73 = drawGame console $ Game state { window = InventoryW }
 onKeyPress console g@(Game state) key | key == numpad 7 = drawGame console $ playerJump g (-1)
 onKeyPress console g@(Game state) key | key == numpad 9 = drawGame console $ playerJump g 1
 onKeyPress console g@(Game state) key | key == numpad 8 = drawGame console $ playerJump g 0
@@ -388,13 +407,13 @@ onKeyPress console g@(Game state) key =
         Just delta -> drawGame console $ movePlayer delta g
         Nothing    -> return g
 
-onKeyPress console MainMenu key                            | key == 13       = return $ NameCreation { playerName: "" }
-onKeyPress console (NameCreation {playerName = pname}) key | key == 13       = return $ CharCreation { playerName: pname }
-onKeyPress console (NameCreation {playerName = xs}) key    | key == 8        = return $ NameCreation { playerName: (take (strlen xs - 1) xs) }
-onKeyPress console (NameCreation {playerName = ""}) key                      = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
-onKeyPress console (NameCreation {playerName = xs}) key    | strlen xs > 15  = return $ NameCreation { playerName: xs }
-onKeyPress console (NameCreation {playerName = xs}) key                      = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
-onKeyPress console (CharCreation {playerName = xs}) key    | key == 65       = return $ initialState xs
+onKeyPress console MainMenu key                              | key == 13       = return $ NameCreation { playerName: "" }
+onKeyPress console (NameCreation { playerName = pname }) key | key == 13       = return $ CharCreation { playerName: pname }
+onKeyPress console (NameCreation { playerName = xs })    key | key == 8        = return $ NameCreation { playerName: (take (strlen xs - 1) xs) }
+onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
+onKeyPress console (NameCreation { playerName = xs })    key | strlen xs > 15  = return $ NameCreation { playerName: xs }
+onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
+onKeyPress console (CharCreation { playerName = xs })    key | key == 65       = return $ initialState xs
 onKeyPress _ st _ = return st
 
 
