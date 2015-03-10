@@ -57,14 +57,17 @@ levelWeights l@(Level level) = do
         makeRow i x | otherwise       = []
 
         tileWeight :: Point -> Number
-        tileWeight p | canWalkOn p = 1
-        tileWeight p | otherwise   = 0
+        tileWeight p | canWalkOn p || canClimbOn p = 1
+        tileWeight p | otherwise                   = 0
 
         getTile' :: Point -> Tile
         getTile' = fromMaybe Ground <<< getTile l
 
         canWalkOn :: Point -> Boolean
         canWalkOn p = blocked (p .+. {x:0, y:1}) && not (blocked p)
+
+        canClimbOn :: Point -> Boolean
+        canClimbOn = isTileClimbable <<< getTile'
 
         blocked :: Point -> Boolean
         blocked = isTileSolid <<< getTile'

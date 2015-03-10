@@ -34,7 +34,7 @@ data GameState = Game { level         :: Level
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
-                      , levelGraph    :: Graph
+                      , pathfinder    :: Pathfinder
                       , window        :: GameWindow
                       }
                | MainMenu
@@ -53,7 +53,7 @@ initialState pname = Game
         , inventory: []
         , freeFallTimer: 0
         , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
-        , levelGraph: makeGraph (levelWeights lvl)
+        , pathfinder: makePathfinder (levelWeights lvl)
         , window: GameW
         }
     where
@@ -61,7 +61,7 @@ initialState pname = Game
 
         pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop }
 
-        testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
+        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
@@ -227,7 +227,20 @@ updateCreatures advance g@(Game state') =
 
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
-        updateCreatureOnce i game = modifyCreatureAt i game $ updatePhysics game
+        updateCreatureOnce i game = modifyCreatureAt i game $ \c -> updateAI c --updatePhysics game
+            where
+                updateAI c = case head (pathToPlayer game c.pos) of
+                                Just p  -> c { pos = p }
+                                Nothing -> c
+
+        pathToPlayer :: GameState -> Point -> [Point]
+        pathToPlayer (Game state) start = findPath state.pathfinder start (groundProject state.player.pos)
+            where
+                -- Projects position to ground.
+                groundProject :: Point -> Point
+                groundProject p | isValidMove state.level (p .+. {x:0, y:1})
+                    = groundProject (p .+. {x:0, y:1})
+                groundProject p | otherwise = p
 
 updatePhysics :: forall r. GameState -> { pos :: Point, vel :: Point | r } -> { pos :: Point, vel :: Point | r }
 updatePhysics g@(Game state) c | inFreeFall state.level c = move g fc (unitp fc.vel)
@@ -296,9 +309,10 @@ maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
 calcSpeed :: GameState -> [Item] -> Creature -> Number
-calcSpeed (Game state) inv c | inFreeFall state.level c = 500
-calcSpeed (Game state) []  c                            = 1000 - (c.stats.dex - 10) * 25
-calcSpeed (Game state) inv c | otherwise                = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
+calcSpeed (Game state) inv c | isClimbable state.level c.pos = 1500
+calcSpeed (Game state) inv c | inFreeFall state.level c      = 500
+calcSpeed (Game state) []  c                                 = 1000 - (c.stats.dex - 10) * 25
+calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
     where
         deltaWeight :: Number -> Number
         deltaWeight n | n < 40.0 = 0
