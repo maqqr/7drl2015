@@ -15,6 +15,7 @@ import Graphics.CanvasConsole
 import GameData
 import Utils
 import Level
+import Astar
 import Line
 
 strlen = Data.String.length
@@ -29,6 +30,7 @@ data GameState = Game { level         :: Level
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
+                      , levelGraph    :: Graph
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -36,7 +38,7 @@ data GameState = Game { level         :: Level
 
 initialState :: String -> GameState
 initialState pname = Game
-        { level: stringToLevel testLevel
+        { level: lvl
         , player: pl
         , npcs: [testGuard]
         , items: [testItem1, testItem2]
@@ -46,9 +48,11 @@ initialState pname = Game
         , inventory: []
         , freeFallTimer: 0
         , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
+        , levelGraph: makeGraph (levelWeights lvl)
         }
     where
-        pl :: Creature
+        lvl = stringToLevel testLevel
+
         pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop }
 
         testGuard = { pos: {x: 10, y: 4}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
@@ -74,7 +78,7 @@ drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
-    mapM_ (\p -> drawTile (drawChar' p) (getTile state.level (p .-. offset))) viewportPoints
+    mapM_ (tileDrawer offset) viewportPoints
     mapM_ (drawCreature offset) state.npcs
     mapM_ (drawItem offset) state.items
     drawCreature offset state.player
@@ -95,6 +99,11 @@ drawGame console g@(Game state) = do
             x' <- (state.player.pos.x - r) .. (state.player.pos.x + r)
             y' <- (state.player.pos.y - r) .. (state.player.pos.y + r)
             return {x: x', y: y'}
+
+        tileDrawer :: Point -> Point -> ConsoleEff Unit
+        tileDrawer offset p = drawTileWithFov pInWorld (drawChar' p) (getTile state.level pInWorld)
+            where
+                pInWorld = p .-. offset
 
         drawStrings :: Point -> String -> [String] -> ConsoleEff Unit
         drawStrings p col (x:xs) = drawString console x col p.x p.y
@@ -124,8 +133,12 @@ drawGame console g@(Game state) = do
         drawItemType d (Loot _)   = d "$" "FFAA00"
         drawItemType d (Weapon _) = d "/" "AAAAAA"
 
+        drawTileWithFov :: forall a. Point -> (String -> String -> a) -> Maybe Tile -> a
+        drawTileWithFov p d t | lineOfSight state.level state.player.pos p = drawTile d t
+        drawTileWithFov p d t | otherwise = d (fromCode 178) "111111"
+
         drawTile :: forall a. (String -> String -> a) -> Maybe Tile -> a
-        drawTile d (Just Air)        = d " " "FFFFFF"
+        drawTile d (Just Air)        = d (fromCode 176) "002456"
         drawTile d (Just Ground)     = d (fromCode 176) "AAAAAA"
         drawTile d (Just Grass)      = d (fromCode 176) "009900"
         drawTile d (Just Wall)       = d (fromCode 219) "444422"
@@ -134,7 +147,7 @@ drawGame console g@(Game state) = do
         drawTile d (Just DoorClosed) = d "+" "666633"
         drawTile d (Just DoorOpen)   = d "|" "666633"
         drawTile d (Just BgCave)     = d (fromCode 176) "484848"
-        drawTile d (Just BgHouse)    = d (fromCode 219) "0D0D0D"
+        drawTile d (Just BgHouse)    = d (fromCode 219) "222205"
         drawTile d (Just Bush)       = d (fromCode 172) "009900"
         drawTile d (Just Stairs)     = d "<" "FFFFFF"
         drawTile d _                 = d "?" "FFFFFF"

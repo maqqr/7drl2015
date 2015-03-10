@@ -8,6 +8,7 @@ import qualified Data.Array.Unsafe as U
 import Data.Maybe
 import GameData
 import Utils
+import Astar
 
 data Tile = Air
           | Ground     | Grass      | Wall     | SWall
@@ -43,6 +44,28 @@ isTileTransparent _          = true
 isTileClimbable :: Tile -> Boolean
 isTileClimbable Stairs = true
 isTileClimbable _      = false
+
+levelWeights :: Level -> [[Number]]
+levelWeights l@(Level level) = do
+    y <- 0 .. (level.height - 1)
+    [makeRow y 0]
+    where
+        makeRow :: Number -> Number -> [Number]
+        makeRow i x | x < level.width = tileWeight {x: x, y: i} : makeRow i (x + 1)
+        makeRow i x | otherwise       = []
+
+        tileWeight :: Point -> Number
+        tileWeight p | canWalkOn p = 1
+        tileWeight p | otherwise   = 0
+
+        getTile' :: Point -> Tile
+        getTile' = fromMaybe Ground <<< getTile l
+
+        canWalkOn :: Point -> Boolean
+        canWalkOn p = blocked (p .+. {x:0, y:1}) && not (blocked p)
+
+        blocked :: Point -> Boolean
+        blocked = isTileSolid <<< getTile'
 
 newLevel :: Number -> Number -> Level
 newLevel w h = Level { width: w, height: h, tiles: replicate (w * h) Air }
