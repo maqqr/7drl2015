@@ -1,6 +1,8 @@
 module GameData where
 
+import Data.Tuple
 import Data.String
+import qualified Data.Map as M
 import Utils
 import Math
 
@@ -42,15 +44,32 @@ type Stats =
 
 defaultStats = { hp: 10, def: 10, str: 10, dex: 10, int: 10}
 
-data SkillType = WeaponSkill
-               | ClimbSkill
+data SkillType = WeaponSkill | Sneak | Athletics | Lockpick
 
-type Skill  = { skillType :: SkillType, level :: Number, prog :: Number }
+type Skill = { level :: Number, prog :: Number }
 
-defaultSkills :: [Skill]
-defaultSkills = [ { skillType: WeaponSkill, level: 1, prog: 0 }
-                , { skillType: WeaponSkill, level: 1, prog: 0 }
-                ]
+type Skills = M.Map SkillType Skill
+
+instance showSkillType :: Show SkillType where
+    show WeaponSkill = "weapon"
+    show Sneak = "sneaking"
+    show Athletics = "athletics"
+    show Lockpick = "lockpicking"
+
+instance ordSkillType :: Ord SkillType where
+    compare a b = compare (show a) (show b)
+
+instance eqSkillType :: Eq SkillType where
+    (==) a b = show a == show b
+    (/=) a b = not (a == b)
+
+defaultSkills :: Skills
+defaultSkills = M.fromList [Tuple WeaponSkill {level: 0, prog: 0}
+                           ,Tuple Sneak { level: 0, prog: 0}
+                           ,Tuple Athletics { level: 0, prog: 0}
+                           ,Tuple Lockpick { level: 0, prog: 0}
+                           ]
+
 
 data CreatureType = Player | Guard | Archer | Peasant
 

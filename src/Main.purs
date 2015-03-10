@@ -31,7 +31,7 @@ data GameState = Game { level         :: Level
                       , items         :: [Item]
                       , playerName    :: String
                       , points        :: Number
-                      , skills        :: [Skill]
+                      , skills        :: Skills
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
@@ -91,6 +91,33 @@ randomPoint g@(Game { level = (Level level) }) =
 
 messageBufSize :: Number
 messageBufSize = 4
+
+useSkill :: SkillType -> Number -> Number -> GameState -> { success :: Boolean, game :: GameState }
+useSkill skillType odds expr g@(Game state) = { success: success, game: addExp gen.game }
+    where
+        gen       = randInt 0 99 g
+        finalOdds = odds * pow 1.2 (fromMaybe 0 $ (\s -> s.level) <$> M.lookup skillType state.skills)
+        success   = gen.n < finalOdds
+        addExp g@(Game state) | success =
+            let skill        = fromMaybe { level: 0, prog: 0 } $ M.lookup skillType state.skills
+                updatedSkill = increaseSkill skill
+                gotLevel     = updatedSkill.level > skill.level
+            in addLevelUpMsg gotLevel updatedSkill.level $ Game state { skills = M.insert skillType updatedSkill state.skills }
+        addExp g@(Game state) | otherwise = g
+
+        expRequired :: Number -> Number
+        expRequired lvl = 100 + 20 * lvl
+
+        addLevelUpMsg :: Boolean -> Number -> GameState -> GameState
+        addLevelUpMsg true newlvl = addMsg $ "Your " ++ show skillType ++ " skill increased to " ++ show newlvl ++ "."
+        addLevelUpMsg _ _         = id
+
+        increaseSkill :: Skill -> Skill
+        increaseSkill skill | skill.prog + expr >= expRequired skill.level =
+            skill { level = skill.level + 1, prog = skill.prog + expr - expRequired skill.level }
+        increaseSkill skill | otherwise =
+            skill { prog = skill.prog + expr }
+
 
 addMsg :: String -> GameState -> GameState
 addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
@@ -453,16 +480,23 @@ calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.d
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld false (calcSpeed g state.inventory state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+        updateWorld false (calcSpeed g state.inventory state.player) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
         else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
+        useAthletics :: GameState -> GameState
+        useAthletics g@(Game state) = (useSkill Athletics 50 20 g).game
+
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
 
         checkTile :: Tile -> GameState
         checkTile DoorClosed = addMsg "You open the door." $ setTile' newpos DoorOpen g
-        checkTile DoorLocked = addMsg "The door is locked. You pick the lock." $ setTile' newpos DoorClosed g
+        checkTile DoorLocked = pickLock
         checkTile _          = g
+
+        pickLock = let use = useSkill Lockpick 10 20 g
+                   in if use.success then addMsg "The door is locked. You managed to pick the lock." $ setTile' newpos DoorClosed use.game
+                   else addMsg "The door is locked. You fail to pick the lock." use.game
 
 playerJump :: GameState -> Number -> GameState
 playerJump g@(Game state) xdir | not (isValidMove state.level (state.player.pos .+. {x: xdir, y: -1})) =
