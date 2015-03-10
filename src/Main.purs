@@ -59,9 +59,9 @@ initialState pname = Game
     where
         lvl = stringToLevel testLevel
 
-        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop }
+        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
-        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
+        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
@@ -136,8 +136,16 @@ drawGame console g@(Game state) = do
         drawChar' pos c col = drawChar console c col pos.x pos.y
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
-        drawCreature offset c | playerCanSee c.pos = drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
-        drawCreature offset c | otherwise          = return unit
+        drawCreature offset c | playerCanSee c.pos =
+            drawAlertness (c.pos .+. offset .+. {x: 0, y: -1}) c.ai >> drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
+        drawCreature offset c | otherwise = return unit
+
+        drawAlertness :: Point -> AI -> ConsoleEff Unit
+        drawAlertness p (AI _        Sleep)    = drawChar' p "Z" "FFFFFF"
+        drawAlertness p (AI MightSee _ )       = drawChar' p "?" "555555"
+        drawAlertness p (AI (Suspicious _) _ ) = drawChar' p "?" "FFFF11"
+        drawAlertness p (AI (Alert _) _ )      = drawChar' p "!" "FF0000"
+        drawAlertness p _ = return unit
 
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
         drawCreatureType d Player  = d "@" "FF0000"
@@ -246,14 +254,56 @@ updateCreatures advance g@(Game state') =
 
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
-        updateCreatureOnce i game = modifyCreatureAt i game $ \c -> updateAI c --updatePhysics game
+        updateCreatureOnce i g@(Game state) =
+            let newAlert = updateAlertness (get i g NoAI (\c -> c.ai))
+            in  modifyCreatureAt i (updateAI newAlert) (\c -> c { ai = newAlert }) -- add updatePhysics?
             where
-                updateAI c = case head (pathToPlayer game c.pos) of
-                                Just p  -> c { pos = p }
-                                Nothing -> c
+                -- Creature position
+                cpos :: Point
+                cpos = get i g zerop (\c -> c.pos)
+
+                canSeePlayer :: Boolean
+                canSeePlayer = lineOfSight state.level cpos state.player.pos
+
+                setAlertness :: AIState -> Alertness -> GameState
+                setAlertness st a = modifyCreatureAt i g $ \c -> c { ai = AI a st }
+
+                updateAlertness :: AI -> AI
+                updateAlertness (AI NoAlert st)  | canSeePlayer = AI MightSee st
+                updateAlertness (AI NoAlert st)  | otherwise    = AI NoAlert st
+                updateAlertness (AI MightSee st) | canSeePlayer = AI (Suspicious 1) st
+                updateAlertness (AI MightSee st) | otherwise    = AI NoAlert st
+                updateAlertness (AI (Suspicious n) st) | n == 0                = AI NoAlert st
+                updateAlertness (AI (Suspicious n) st) | not canSeePlayer      = AI (Suspicious (n - 1)) st
+                updateAlertness (AI (Suspicious n) st) | canSeePlayer && n < 4 = AI (Suspicious (n + 1)) st
+                updateAlertness (AI (Suspicious n) st) | otherwise             = AI (Alert 10) st
+                updateAlertness (AI (Alert n) st) | canSeePlayer = AI (Alert 10) st
+                updateAlertness (AI (Alert n) st) | n == 0       = AI NoAlert st
+                updateAlertness (AI (Alert n) st) | otherwise    = AI (Alert (n - 1)) st
+                updateAlertness x = x
+
+                updateAI :: AI -> GameState
+                updateAI (AI (Alert _) _)      = modifyCreatureAt i g $ moveToPlayer
+                updateAI (AI (Suspicious _) _) = modifyCreatureAt i g $ moveToPlayer
+                updateAI (AI _ (Idle p))       = modifyCreatureAt i g $ moveToPoint p
+                updateAI (AI _ (Patrol p)) =
+                    if cpos .==. p then g -- todo: new partrol point
+                    else modifyCreatureAt i g $ moveToPoint p
+                updateAI _ = g
+
+                moveToPoint p c = case head (pathToPoint g c.pos p) of
+                                   Just p'  -> c { pos = p' }
+                                   Nothing -> c
+
+                moveToPlayer c = case head (pathToPlayer g c.pos) of
+                                   Just p'  -> c { pos = p' }
+                                   Nothing -> c
+
+        pathToPoint :: GameState -> Point -> Point -> [Point]
+        pathToPoint (Game state) start end = findPath state.pathfinder start end
 
         pathToPlayer :: GameState -> Point -> [Point]
-        pathToPlayer (Game state) start = findPath state.pathfinder start (groundProject state.player.pos)
+        pathToPlayer g@(Game state) start = pathToPoint g start (groundProject state.player.pos)
             where
                 -- Projects position to ground or climbable tile.
                 groundProject :: Point -> Point

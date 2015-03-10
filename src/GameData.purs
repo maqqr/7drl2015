@@ -63,6 +63,16 @@ instance eqCT :: Eq CreatureType where
     (==) a b = show a == show b
     (/=) a b = show a /= show b
 
+data AIState = Sleep
+             | Idle Point   -- idling position
+             | Patrol Point -- where to go
+
+data Alertness = NoAlert  -- Does not see player
+               | MightSee -- There is LOS and a chance to turn into Suspicious
+               | Suspicious Number -- Number = progress towards alert
+               | Alert Number -- Number = number of turns to stay alert
+
+data AI = AI Alertness AIState | NoAI
 
 type Creature =
     { pos   :: Point
@@ -70,6 +80,7 @@ type Creature =
     , stats :: Stats
     , time  :: Number
     , vel   :: Point
+    , ai    :: AI
     }
 
 data ItemType = Loot   { value :: Number }
