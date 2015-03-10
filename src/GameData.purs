@@ -77,3 +77,6 @@ data ItemType = Loot   { value :: Number }
 
 type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number }
 
+showItem :: Item -> String
+showItem { itemType = Weapon { dmg = d, attackBonus = ab }, weight = w } = "Weapon, Dmg: " ++ (show d) ++ ", Weight: " ++ (show w)
+showItem _ = "Empty"
