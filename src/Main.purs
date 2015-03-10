@@ -155,7 +155,7 @@ drawGame console g@(Game state) = do
         drawTile d (Just Grass)      = d (fromCode 176) "009900"
         drawTile d (Just Wall)       = d (fromCode 219) "444422"
         drawTile d (Just SWall)      = d (fromCode 219) "444422"
-        drawTile d (Just DoorLocked) = d "+" "666633"
+        drawTile d (Just DoorLocked) = d "+" "661111"
         drawTile d (Just DoorClosed) = d "+" "666633"
         drawTile d (Just DoorOpen)   = d "|" "666633"
         drawTile d (Just BgCave)     = d (fromCode 176) "484848"
@@ -238,10 +238,10 @@ updateCreatures advance g@(Game state') =
         pathToPlayer :: GameState -> Point -> [Point]
         pathToPlayer (Game state) start = findPath state.pathfinder start (groundProject state.player.pos)
             where
-                -- Projects position to ground.
+                -- Projects position to ground or climbable tile.
                 groundProject :: Point -> Point
-                groundProject p | isValidMove state.level (p .+. {x:0, y:1})
-                    = groundProject (p .+. {x:0, y:1})
+                groundProject p | isClimbable state.level (p .+. {x:0, y:0}) = p
+                groundProject p | isValidMove state.level (p .+. {x:0, y:1}) = groundProject (p .+. {x:0, y:1})
                 groundProject p | otherwise = p
 
 updatePhysics :: forall r. GameState -> { pos :: Point, vel :: Point | r } -> { pos :: Point, vel :: Point | r }
@@ -283,6 +283,10 @@ updateWorld updatePlayer advance =
             Game state { player = updatePhysics (Game state) state.player }
 
         updateItemPhysics (Game state) = Game state { items = map (updatePhysics (Game state)) state.items }
+
+setTile' :: Point -> Tile -> GameState -> GameState
+setTile' p t (Game state) = let newlevel = setTile state.level p t
+                            in Game state { level = newlevel, pathfinder = makePathfinder (levelWeights newlevel) }
 
 inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
@@ -335,7 +339,8 @@ movePlayer delta g@(Game state) =
         canMove = isValidMove state.level newpos
 
         checkTile :: Tile -> GameState
-        checkTile DoorLocked = addMsg "The door is locked. You pick the lock." g
+        checkTile DoorClosed = addMsg "You open the door." $ setTile' newpos DoorOpen g
+        checkTile DoorLocked = addMsg "The door is locked. You pick the lock." $ setTile' newpos DoorClosed g
         checkTile _          = g
 
 playerJump :: GameState -> Number -> GameState

@@ -43,9 +43,12 @@ isTileTransparent Water      = false
 isTileTransparent _          = true
 
 isTileClimbable :: Tile -> Boolean
-isTileClimbable Stairs = true
-isTileClimbable Water  = true
-isTileClimbable _      = false
+isTileClimbable Stairs     = true
+isTileClimbable Water      = true
+isTileClimbable DoorOpen   = true
+isTileClimbable DoorClosed = true
+isTileClimbable DoorLocked = true
+isTileClimbable _          = false
 
 levelWeights :: Level -> [[Number]]
 levelWeights l@(Level level) = do
@@ -70,7 +73,13 @@ levelWeights l@(Level level) = do
         canClimbOn = isTileClimbable <<< getTile'
 
         blocked :: Point -> Boolean
-        blocked = isTileSolid <<< getTile'
+        blocked = blocksNpc <<< getTile'
+
+        blocksNpc :: Tile -> Boolean
+        blocksNpc DoorOpen   = false
+        blocksNpc DoorClosed = false
+        blocksNpc DoorLocked = false
+        blocksNpc t = isTileSolid t
 
 newLevel :: Number -> Number -> Level
 newLevel w h = Level { width: w, height: h, tiles: replicate (w * h) Air }
