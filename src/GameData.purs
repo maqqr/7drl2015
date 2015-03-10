@@ -76,11 +76,12 @@ data Alertness = NoAlert  -- Does not see player
 data AI = AI Alertness AIState | NoAI
 
 type Creature =
-    { pos   :: Point
+    { pos   :: Point -- Position
+    , dir   :: Point -- Facing direction
     , ctype :: CreatureType
     , stats :: Stats
     , time  :: Number
-    , vel   :: Point
+    , vel   :: Point -- Velocity
     , ai    :: AI
     }
 

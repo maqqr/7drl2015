@@ -38,6 +38,8 @@ data GameState = Game { level         :: Level
                       , pathfinder    :: Pathfinder
                       , window        :: GameWindow
                       , seed          :: Number
+                      , blinkTimer    :: Number
+                      , blink         :: Boolean
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -54,17 +56,19 @@ initialState pname = Game
         , skills: defaultSkills
         , inventory: []
         , freeFallTimer: 0
-        , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
+        , messageBuf: []
         , pathfinder: makePathfinder (levelWeights lvl)
         , window: GameW
         , seed: 456977
+        , blinkTimer: 0
+        , blink: false
         }
     where
         lvl = stringToLevel testLevel
 
-        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
+        pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
-        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Patrol {x: 10, y: 20}) }
+        testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Patrol {x: 10, y: 20}) }
         testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
@@ -93,11 +97,19 @@ addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
     Game state { messageBuf = drop 1 state.messageBuf ++ [msg] }
 addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
+updateBlinkTimer :: Number -> GameState -> GameState
+updateBlinkTimer dt (Game state) | state.blinkTimer > 0.5 = Game state { blink = not state.blink, blinkTimer = 0 }
+updateBlinkTimer dt (Game state) | otherwise              = Game state { blinkTimer = state.blinkTimer + dt }
+
+blinkDraw :: Console -> GameState -> ConsoleEff GameState
+blinkDraw console g@(Game state) | state.blinkTimer == 0 = drawGame console g
+blinkDraw console g@(Game state) | otherwise             = return g
+
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
-    drawGame console <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
+    drawGame console <<< updateBlinkTimer dt <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
-    return $ Game state { freeFallTimer = state.freeFallTimer + dt }
+    blinkDraw console <<< updateBlinkTimer dt $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
 
 drawGame :: Console -> GameState -> ConsoleEff GameState
@@ -136,6 +148,9 @@ drawGame console g@(Game state) = do
             y' <- 0 .. 19
             return {x: x', y: y'}
 
+        inViewport :: Point -> Boolean
+        inViewport p = p.x >= 0 && p.y >= 0 && p.x < 80 && p.y < 20
+
         pointsAroundPlayer :: Number -> [Point]
         pointsAroundPlayer r = do
             x' <- (state.player.pos.x - r) .. (state.player.pos.x + r)
@@ -156,16 +171,23 @@ drawGame console g@(Game state) = do
         drawChar' pos c col = drawChar console c col pos.x pos.y
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
-        drawCreature offset c | playerCanSee c.pos =
-            drawAlertness (c.pos .+. offset .+. {x: 0, y: -1}) c.ai >> drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
+        drawCreature offset c | playerCanSee c.pos && inViewport (c.pos .+. offset) =
+            drawAlertness (c.pos .+. offset .+. {x: 0, y: -1}) c.ai
+            >> drawFacing (c.pos .+. offset) c.dir
+            >> drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
         drawCreature offset c | otherwise = return unit
 
         drawAlertness :: Point -> AI -> ConsoleEff Unit
-        drawAlertness p (AI _        Sleep)    = drawChar' p "Z" "FFFFFF"
-        drawAlertness p (AI MightSee _ )       = drawChar' p "?" "555555"
-        drawAlertness p (AI (Suspicious _) _ ) = drawChar' p "?" "FFFF11"
-        drawAlertness p (AI (Alert _) _ )      = drawChar' p "!" "FF0000"
+        drawAlertness p (AI _        Sleep)    | state.blink = drawChar' p "Z" "FFFFFF"
+        drawAlertness p (AI MightSee _ )       | state.blink = drawChar' p "?" "555555"
+        drawAlertness p (AI (Suspicious _) _ ) | state.blink = drawChar' p "?" "FFFF11"
+        drawAlertness p (AI (Alert _) _ )      | state.blink = drawChar' p "!" "FF0000"
         drawAlertness p _ = return unit
+
+        drawFacing :: Point -> Point -> ConsoleEff Unit
+        drawFacing p dir | dir.x < 0 && state.blink = drawChar' (p .+. {x: -1, y: 0}) ">" "00FF00"
+        drawFacing p dir | dir.x > 0 && state.blink = drawChar' (p .+. {x:  1, y: 0}) "<" "00FF00"
+        drawFacing p dir | otherwise = return unit
 
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
         drawCreatureType d Player  = d "@" "FF0000"
@@ -178,8 +200,9 @@ drawGame console g@(Game state) = do
         fromCode = singleton <<< fromCharCode
 
         drawItem :: Point -> Item -> ConsoleEff Unit
-        drawItem offset i | playerCanSee i.pos = drawItemType (drawChar' (i.pos .+. offset)) i.itemType
-        drawItem offset i | otherwise          = return unit
+        drawItem offset i | playerCanSee i.pos && inViewport (i.pos .+. offset) =
+            drawItemType (drawChar' (i.pos .+. offset)) i.itemType
+        drawItem offset i | otherwise = return unit
 
         drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
         drawItemType d (Loot _)   = d "$" "FFAA00"
@@ -323,11 +346,11 @@ updateCreatures advance g@(Game state') =
                 updateAI g _ = g
 
                 moveToPoint p c = case head (pathToPoint g c.pos p) of
-                                   Just p'  -> c { pos = p' }
+                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
                                    Nothing -> c
 
                 moveToPlayer c = case head (pathToPlayer g c.pos) of
-                                   Just p'  -> c { pos = p' }
+                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
                                    Nothing -> c
 
         pathToPoint :: GameState -> Point -> Point -> [Point]
