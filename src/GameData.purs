@@ -108,15 +108,24 @@ type Creature =
 
 data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine
 
-data WeaponPrefix = Rusty | Broken | Dull | Masterwork | Sharp | Lethal | Light | Balanced | Heavy | Godly
+data WeaponPrefix = Broken | Rusty | Dull | Sharp | Lethal | Masterwork | Light | Balanced | Heavy | Godly
 
 prefixDamageMod :: WeaponPrefix -> Number
-prefixDamageMod Rusty = -1
--- todo
+prefixDamageMod Broken     = -3
+prefixDamageMod Rusty      = -2
+prefixDamageMod Dull       = -1
+prefixDamageMod Sharp      = 1
+prefixDamageMod Lethal     = 2
+prefixDamageMod Masterwork = 3
+prefixDamageMod Godly      = 4
 prefixDamageMod _ = 0
 
 prefixWeightMod :: WeaponPrefix -> Number
 prefixWeightMod _ = 0 -- todo
+
+showPrefix :: [WeaponPrefix] -> String
+showPrefix []     = ""
+showPrefix (x:xs) = show x ++ showPrefix xs
 
 instance showWeaponPrefix :: Show WeaponPrefix where
     show Rusty      = "rusty"
@@ -130,24 +139,30 @@ instance showWeaponPrefix :: Show WeaponPrefix where
     show Heavy      = "heavy"
     show Godly      = "godly"
 
-data WeaponType = Sword | Axe
+data WeaponType = Sword | Axe | Dagger
 
 instance showWeaponType :: Show WeaponType where
-    show Sword = "sword"
-    show Axe   = "axe"
+    show Sword  = "sword"
+    show Axe    = "axe"
+    show Dagger = "dagger"
 
 baseDamage :: WeaponType -> Number
 baseDamage Sword = 3
-baseDamage Axe = 5
-baseDamage _ = 0
+baseDamage Axe   = 5
+baseDamage _     = 0
 
 baseAttackBonus :: WeaponType -> Number
 baseAttackBonus Sword = 2
-baseAttackBonus Axe = 0
-baseAttackBonus _ = 0
+baseAttackBonus Axe   = 0
+baseAttackBonus _     = 0
 
 data ItemType = Loot   { value :: Number }
               | Weapon { weaponType :: WeaponType, prefix :: [WeaponPrefix] }
+
+instance showItemType :: Show ItemType where
+    show (Loot   { value = val })                         = (show val) ++ " $"
+    show (Weapon { weaponType = t, prefix = [] })         = show t
+    show (Weapon { weaponType = t, prefix = prefixList }) = (showPrefix prefixList) ++ " " ++ (show t)
 
 type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number }
 
@@ -161,5 +176,7 @@ itemDamage { itemType = Weapon w } = baseDamage w.weaponType + sum (map prefixDa
 itemDamage _ = 0
 
 showItem :: Item -> String
-showItem i@{ itemType = Weapon { weaponType = t }, weight = w } = "Weapon, Dmg: " ++ show (itemDamage i) ++ ", Weight: " ++ show w
+--showItem i@( { w@( Weapon _ ), weight = we } ) = show w  ++ ", Dmg: " ++ show i ++ ", Weight: " ++ show we
+-- or (neather works) 
+--showItem ( Item { itemType = (Weapon { weaponType = w, prefix = pre }), weight = we } ) = show (Weapon { weaponType = w, prefix = pre }) ++ ", Dmg: " ++ show (itemDamage ( Item { t@{ Weapon w }, weight = we } )) ++ ", Weight: " ++ show we
 showItem _ = "Empty"

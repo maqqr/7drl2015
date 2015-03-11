@@ -50,7 +50,7 @@ initialState pname = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
-        , items: [testItem1, testItem2]
+        , items: [testItem1, testItem2, testItem3]
         , playerName: pname
         , points: 0
         , skills: defaultSkills
@@ -71,6 +71,7 @@ initialState pname = Game
         testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
         testItem1 = { itemType: Weapon { weaponType: Sword, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
+        testItem3 = { itemType: Weapon { weaponType: Axe, prefix: [] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
 
 -- Generates random number.
 generate :: GameState -> { n :: Number, game :: GameState }
@@ -155,10 +156,16 @@ onUpdate console _ g = drawGame console g
 -- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game { window = EquipW }) = do
-    --TODO: drawing equipment window
+    clear console
+    drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
+    drawString console "Equipments: " "AAAAAA" 2 4
+    --TODO: equipment system
     return g
 drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
-    drawInventory inv 4 4
+    clear console
+    drawString console "Press i to continue and e to open your equipments." "AAAAAA" 1 1
+    drawString console ("Inventory: (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
+    drawInventory inv 3 5
     return g
         where
             drawItemInfo :: Item -> Number -> Number -> ConsoleEff Unit
@@ -166,7 +173,7 @@ drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
             drawItemInfo _ x y = drawString console "empty"      "AAAAAA" x y
 
             drawInventory :: [Item] -> Number -> Number -> ConsoleEff Unit
-            drawInventory [] x y = drawString console "---" "AAAAAA" x y
+            drawInventory [] x y = drawString console "- Empty -" "AAAAAA" x y
             drawInventory (i:is) x y = do
                 drawItemInfo i x y
                 drawInventory is x (y + 1)
@@ -541,7 +548,7 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
-        Just item -> Game state { items = deleteItem state.items point, inventory = addItem state.inventory item }
+        Just item -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = addItem state.inventory item }
         Nothing   -> Game state
     where
         deleteItem :: [Item] -> Point -> [Item]
@@ -555,8 +562,15 @@ pickUp point (Game state) =
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
+
+-- Change game states window with i and e (GameW, EquipW and InventoryW)
 onKeyPress console (Game state@{window = InventoryW }) key  | key == 73       = drawGame console $ Game state { window = GameW }
 onKeyPress console (Game state@{window = GameW })      key  | key == 73       = drawGame console $ Game state { window = InventoryW }
+onKeyPress console (Game state@{window = EquipW })     key  | key == 69       = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{window = GameW })      key  | key == 69       = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{window = EquipW  })    key  | key == 73       = drawGame console $ Game state { window = InventoryW }
+onKeyPress console (Game state@{window = InventoryW }) key  | key == 69       = drawGame console $ Game state { window = EquipW }
+
 onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 7 = drawGame console $ playerJump g (-1)
 onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 9 = drawGame console $ playerJump g 1
 onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 8 = drawGame console $ playerJump g 0
