@@ -44,3 +44,13 @@ enumerate xs = enum' xs 0
     where
         enum' (x:xs) i = Tuple i x : enum' xs (i + 1)
         enum' [] _ = []
+
+rgb :: Number -> Number -> Number -> String
+rgb r g b = toHex r ++ toHex g ++ toHex b
+
+foreign import toHex
+    """
+    function toHex (n) {
+        return n.toString(16);
+    }
+    """ :: Number -> String

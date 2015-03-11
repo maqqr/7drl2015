@@ -47,6 +47,9 @@ type Stats =
 
 defaultStats = { hp: 10, def: 10, str: 10, dex: 10, int: 10}
 
+statModf :: Number -> Number
+statModf x = -5 + floor (x / 2)
+
 data SkillType = WeaponSkill | Sneak | Athletics | Lockpick
 
 type Skill = { level :: Number, prog :: Number }

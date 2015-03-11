@@ -106,7 +106,7 @@ useSkill :: SkillType
          -> { success :: Boolean, game :: GameState }
 useSkill skillType odds expr g@(Game state) = { success: success, game: addExp gen.game }
     where
-        gen       = randInt 0 99 g
+        gen       = randInt 0 100 g
         finalOdds = odds * pow 1.2 (fromMaybe 0 $ (\s -> s.level) <$> M.lookup skillType state.skills)
         success   = gen.n < finalOdds
         addExp g@(Game state) | success = -- Skill increases with successes
@@ -324,6 +324,14 @@ drawGame console (CharCreation {playerName = pname}) = do
     return (CharCreation {playerName: pname})
 
 
+-- Gets creature information from creature at index i.
+get :: forall a. Number -> GameState -> a -> (Creature -> a) -> a
+get i (Game state) d getter = fromMaybe d $ getter <$> state.npcs !! i
+
+-- Modify creature at index i with a function.
+modifyCreatureAt :: Number -> GameState -> (Creature -> Creature) -> GameState
+modifyCreatureAt i (Game state) f = Game state { npcs = modifyAt i f state.npcs }
+
 -- Updates all npcs.
 updateCreatures :: Number -> GameState -> GameState
 updateCreatures advance g@(Game state') =
@@ -335,14 +343,6 @@ updateCreatures advance g@(Game state') =
         -- Advances game time for creature at index i.
         advTime :: Number -> GameState -> GameState
         advTime i game = modifyCreatureAt i game $ \c -> c { time = c.time + advance }
-
-        -- Gets creature information from creature at index i.
-        get :: forall a. Number -> GameState -> a -> (Creature -> a) -> a
-        get i (Game state) d getter = fromMaybe d $ getter <$> state.npcs !! i
-
-        -- Modify creature at index i with a function.
-        modifyCreatureAt :: Number -> GameState -> (Creature -> Creature) -> GameState
-        modifyCreatureAt i (Game state) f = Game state { npcs = modifyAt i f state.npcs }
 
         -- Updates creature at index i until it runs out of time.
         updateCreature :: Number -> GameState -> GameState
@@ -389,23 +389,37 @@ updateCreatures advance g@(Game state') =
                         canWalkOn p = isValidMove state.level p && not (isValidMove state.level (p .+. {x: 0, y: 1}))
 
                 updateAI :: GameState -> AI -> GameState
-                updateAI g (AI (Alert _) _)      = modifyCreatureAt i g $ moveToPlayer
-                updateAI g (AI (Suspicious _) _) = modifyCreatureAt i g $ moveToPlayer
-                updateAI g (AI _ (Idle p))       = modifyCreatureAt i g $ moveToPoint p
+                updateAI g (AI (Alert _) _)      = mover g $ moveToPlayer
+                updateAI g (AI (Suspicious _) _) = mover g $ moveToPlayer
+                updateAI g (AI _ (Idle p))       = mover g $ moveToPoint p
                 updateAI g (AI a (Patrol p)) =
                     if length (pathToPoint g cpos p) <= 2 then
                         let gen = newPatrolPoint g
                         in modifyCreatureAt i gen.game (\c -> c { ai = AI a (Patrol gen.p) })
-                    else modifyCreatureAt i g $ moveToPoint p
+                    else mover g $ moveToPoint p
                 updateAI g _ = g
 
-                moveToPoint p c = case head (pathToPoint g c.pos p) of
-                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
-                                   Nothing -> c
+                mover :: GameState -> (Creature -> Point) -> GameState
+                mover g@(Game state) f = let nextPoint = get i g zerop f
+                            in if state.player.pos .==. nextPoint then
+                                -- get doesn't really get anything from creature, I'm just exploiting
+                                -- it's type to make the attack.
+                                -- get :: Number -> GameState -> GameState -> (Creature -> GameState) -> Gamestate
+                                get i g g (flip npcAttack g)
+                            else modifyCreatureAt i g $ walk nextPoint
 
+                walk :: Point -> Creature -> Creature
+                walk p c = c { pos = p, dir = p .-. c.pos }
+
+                moveToPoint :: Point -> Creature -> Point
+                moveToPoint p c = case head (pathToPoint g c.pos p) of
+                                   Just p'  -> p'
+                                   Nothing -> c.pos
+
+                moveToPlayer :: Creature -> Point
                 moveToPlayer c = case head (pathToPlayer g c.pos) of
-                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
-                                   Nothing -> c
+                                   Just p'  -> p'
+                                   Nothing -> c.pos
 
         pathToPoint :: GameState -> Point -> Point -> [Point]
         pathToPoint (Game state) start end = findPath state.pathfinder start end
@@ -435,6 +449,39 @@ updatePhysics g@(Game state) c | inFreeFall state.level c = move g fc (unitp fc.
         -- 3. calculate final velocity
         fc = c { vel = { x: finalVelX, y: gc.vel.y } }
 updatePhysics _ c = c { vel = zerop }
+
+npcWeapon :: Creature -> Item
+npcWeapon _ = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: zerop, vel: zerop }
+
+-- todo: get player weapon from equipment
+playerWeapon :: GameState -> Item
+playerWeapon _ = { itemType: Weapon { weaponType: Axe, material: Iron, prefix: [Masterwork] }, pos: zerop, vel: zerop }
+
+playerAttack :: Number -> GameState -> GameState
+playerAttack i g@(Game state) = let attack = playerHit g
+                                in if attack.hit then addMsg ("You hit " ++ (get i g "" (\c -> show c.ctype)) ++ "!") $ modifyCreatureAt i attack.game (takeDamage (playerWeapon g) state.player)
+                                   else addMsg ("You missed " ++ get i g "" (\c -> show c.ctype) ++ "!") attack.game
+
+npcAttack :: Creature -> GameState -> GameState
+npcAttack c g = let attack = npcHit c g
+                in if attack.hit then addMsg (show c.ctype ++ " hit you!") <<< (\(Game st) -> Game st { player = takeDamage (npcWeapon c) c st.player }) $ attack.game
+                else addMsg (show c.ctype ++ " tried to attack you, but missed.") attack.game
+
+baseHitChance :: Creature -> Number
+baseHitChance c = 50 + 5 * (statModf c.stats.dex)
+
+playerHit :: GameState -> { hit :: Boolean, game :: GameState }
+playerHit g@(Game state) = let u = useSkill WeaponSkill (baseHitChance state.player) 20 g
+                           in { hit: u.success, game: u.game }
+
+npcHit :: Creature -> GameState -> { hit :: Boolean, game :: GameState }
+npcHit c g = let u = randInt 0 99 g in { hit: u.n < baseHitChance c, game: u.game }
+
+takeDamage :: Item -> Creature -> Creature -> Creature
+takeDamage weapon attacker defender = defender { stats = defender.stats { hp = defender.stats.hp - damage } }
+    where
+        damage = (itemStat weapon).damage + statModf attacker.stats.str
+
 
 -- Moves an object with position. Checks collisions with solid tiles.
 move :: forall r. GameState -> { pos :: Point | r } -> Point -> { pos :: Point | r }
@@ -495,12 +542,7 @@ carryingWeight (x:xs) = (itemStat x).weight + (carryingWeight xs)
 maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
--- Calculates speed value for a creature.
-calcSpeed :: GameState -> [Item] -> Creature -> Number
-calcSpeed (Game state) inv c | isClimbable state.level c.pos = 1500
-calcSpeed (Game state) inv c | inFreeFall state.level c      = 500
-calcSpeed (Game state) []  c                                 = 1000 - (c.stats.dex - 10) * 25
-calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
+speedWithItems c inv = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
     where
         deltaWeight :: Number -> Number
         deltaWeight n | n < 40.0 = 0
@@ -510,17 +552,29 @@ calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.d
         deltaWeight n | n < 100.0 = 400
         deltaWeight n | otherwise = 1000
 
+-- Calculates speed value for a creature.
+calcSpeed :: GameState -> [Item] -> Creature -> Number
+calcSpeed (Game state) inv c | isClimbable state.level c.pos && isValidMove state.level (c.pos .+. {x: 0, y: 1}) = 1500
+calcSpeed (Game state) inv c | inFreeFall state.level c = 500
+calcSpeed (Game state) inv c | otherwise = speedWithItems c inv
+
 movePlayer :: Point -> GameState -> GameState
-movePlayer delta g@(Game state) =
-    if canMove then
-        updateWorld false (calcSpeed g state.inventory state.player) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
-        else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
+movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
+    in if blockIndex >= 0 then
+        updateWorld false (itemStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
+        else if canMove then
+            updateWorld false (calcSpeed g state.inventory state.player) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+            else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         useAthletics :: GameState -> GameState
         useAthletics g@(Game state) = (useSkill Athletics 50 20 g).game
 
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
+
+        enemyBlocks (c:cs) i | c.pos .==. newpos = i
+        enemyBlocks (c:cs) i | otherwise         = enemyBlocks cs (i + 1)
+        enemyBlocks [] _                         = -1
 
         checkTile :: Tile -> GameState
         checkTile DoorClosed = addMsg "You open the door." $ setTile' newpos DoorOpen g
