@@ -4,7 +4,7 @@ import Data.Char
 import Data.String hiding (length, drop)
 import Data.Maybe
 import Data.Tuple
-import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter, drop)
+import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter, drop, deleteAt)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -21,9 +21,11 @@ import Line
 
 strlen = Data.String.length
 
+data InventoryCommand = Drop | Use | NoCommand
+
 data GameWindow = GameW
                 | EquipW
-                | InventoryW Number
+                | InventoryW { index :: Number, command :: InventoryCommand }
 
 data GameState = Game { level         :: Level
                       , player        :: Creature
@@ -142,6 +144,11 @@ drawMessages console p col (x:xs) = drawString console x (rgb col col col) p.x p
                                  >> drawMessages console {x: p.x, y: p.y + 1} (col + 50) xs
 drawMessages _       _ _   []     = return unit
 
+drawStrings :: Console -> Point -> String -> [String] -> ConsoleEff Unit
+drawStrings console p col (x:xs) = drawString console x col p.x p.y
+                                >> drawStrings console {x: p.x, y: p.y + 1} col xs
+drawStrings _ _  _  []           = return unit
+
 -- Updates blinking timer.
 updateBlinkTimer :: Number -> GameState -> GameState
 updateBlinkTimer dt (Game state) | state.blinkTimer > 0.5 = Game state { blink = not state.blink, blinkTimer = 0 }
@@ -162,31 +169,32 @@ onUpdate console _ g = drawGame console g
 
 -- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
-drawGame console g@(Game { window = EquipW }) = do
+drawGame console g@(Game state@{ window = EquipW }) = do
     clear console
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
     drawString console "Equipments: " "AAAAAA" 2 4
     --TODO: equipment system
+    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
     return g
-drawGame console g@(Game { window = InventoryW page, inventory = inv }) = do
+drawGame console g@(Game state@{ window = InventoryW { index = page , command = com }, inventory = inv }) = do
     clear console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
     drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
-    drawInventoryPage inv 0 page 4 5
+    drawInventoryPage inv 0 (page * 10) 4 5
+    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
     return g
         where
             drawItemInfo :: Maybe Item -> Number -> Number -> ConsoleEff Unit
-            drawItemInfo Nothing x y  = drawString console "empty"      "AAAAAA" x y
             drawItemInfo (Just i) x y = drawString console (showItem i) "AAAAAA" x y
             drawItemInfo _ x y        = drawString console "empty"      "AAAAAA" x y
 
             drawInventoryPage :: [Item] -> Number -> Number -> Number -> Number -> ConsoleEff Unit
-            drawInventoryPage [] num index x y = drawString console "--- Empty ---" "AAAAAA" x y --End recursion when list is empty.
+            drawInventoryPage [] num i x y = drawString console "--- Empty ---" "AAAAAA" x y --End recursion when list is empty.
             drawInventoryPage _ 10 _ x y        = drawString console "-------------" "AAAAAA" x y --End recursion when full page (10 items) has been drawn.
-            drawInventoryPage items num index x y  = do
-                drawItemInfo ((!!) items index) (x + 5) y
+            drawInventoryPage items num i x y  = do
+                drawItemInfo ((!!) items i) (x + 5) y
                 drawString console ("(" ++ show num ++ "): ") "AAAAAA" x y
-                drawInventoryPage items (num + 1) (index + 1) x (y + 1)
+                drawInventoryPage items (num + 1) (i + 1) x (y + 1)
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
@@ -222,11 +230,6 @@ drawGame console g@(Game state) = do
 
         drawChar' :: Point -> String -> String -> ConsoleEff Unit
         drawChar' pos c col = drawChar console c col pos.x pos.y
-
-        drawStrings :: Point -> String -> [String] -> ConsoleEff Unit
-        drawStrings p col (x:xs) = drawString console x col p.x p.y
-                                >> drawStrings {x: p.x, y: p.y + 1} col xs
-        drawStrings _ _  []      = return unit
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
         drawCreature offset c | playerCanSee c.pos && inViewport (c.pos .+. offset) =
@@ -610,6 +613,13 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
                           ,numpad 1 // {x: -1, y:  1}
                           ,numpad 3 // {x:  1, y:  1}]
 
+numberkeys :: [Number]
+numberkeys = (48 .. 57) ++ (96 .. 105)
+
+numbers :: M.Map Number Number
+numbers = M.fromList [48 // 0, 49 // 1, 50 // 2, 51 // 3, 52  // 4, 53  // 5, 54  // 6, 55  // 7, 56  // 8, 57  // 9
+                     ,96 // 0, 97 // 1, 98 // 2, 99 // 3, 100 // 4, 101 // 5, 102 // 6, 103 // 7, 104 // 8, 105 // 9]
+
 -- Player tries to pick up an item.
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
@@ -626,22 +636,40 @@ pickUp point (Game state) =
         addItem xs { itemType = Loot { value = num } } = xs
         addItem xs x = x:xs
 
+-- Player tries to drop item while in inventory.
+dropItem :: Number -> GameState -> GameState
+dropItem itemNumber g@(Game state@{ window = InventoryW wi, inventory = inv, items = itemsOnGround }) = 
+    case (!!) inv i of
+        (Just item) -> addMsg ("You dropped: " ++ show item.itemType) $ (Game state { inventory = deleteAt i 1 inv, items = (item { pos = state.player.pos }) : itemsOnGround, window = InventoryW wi { index = 0 } })
+        Nothing -> g
+    where
+        i = itemNumber + wi.index * 10
+dropItem _ g = g
+
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 
 -- Change page in inventory with + and -
-onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | (key == 187 || key == 107) && floor ((length inv) / 10) <= i = drawGame console $ Game state { window = InventoryW 0, inventory = inv }
-onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | key == 187 || key == 107                                   = drawGame console $ Game state { window = InventoryW (i + 1), inventory = inv }
-onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | (key == 189 || key == 109) && i == 0                         = drawGame console $ Game state { window = InventoryW (floor ((length inv) / 10)), inventory = inv }
-onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | key == 189 || key == 109                                   = drawGame console $ Game state { window = InventoryW (i - 1), inventory = inv }
+onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 187 || key == 107) && floor ((length inv) / 10) <= iw.index = drawGame console $ Game state { window = InventoryW iw { index = 0 } }
+onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 187 || key == 107)                                          = drawGame console $ Game state { window = InventoryW iw { index = (iw.index + 1) } }
+onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 189 || key == 109) && iw.index == 0                         = drawGame console $ Game state { window = InventoryW iw { index = (floor ((length inv) / 10)) } }
+onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 189 || key == 109)                                          = drawGame console $ Game state { window = InventoryW iw { index = (iw.index - 1) } }
+
+-- Using command in inventory
+onKeyPress console (Game state@{ window = InventoryW iw })                      key | key == 68           = drawGame console $ addMsg "Which item do you want to drop?" (Game state { window = InventoryW { index: iw.index, command: Drop } })
+onKeyPress console g@(Game state@{ window = InventoryW iw@{ command = Drop } }) key | elem key numberkeys =
+    case M.lookup key numbers of
+        Just number -> drawGame console $ dropItem number (Game state { window = InventoryW iw { command = NoCommand } })
+        Nothing     -> return g
+
 
 -- Change game states window with i and e (GameW, EquipW and InventoryW)
-onKeyPress console (Game state@{ window = InventoryW _ }) key | key == 73  = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{ window = GameW })        key | key == 73  = drawGame console $ Game state { window = InventoryW 0}
-onKeyPress console (Game state@{ window = EquipW })       key | key == 69  = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{ window = GameW })        key | key == 69  = drawGame console $ Game state { window = EquipW }
-onKeyPress console (Game state@{ window = EquipW  })      key | key == 73  = drawGame console $ Game state { window = InventoryW 0}
-onKeyPress console (Game state@{ window = InventoryW _ }) key | key == 69  = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 73  = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = GameW })        key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
+onKeyPress console (Game state@{ window = EquipW })       key  | key == 69  = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = GameW })        key  | key == 69  = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 69  = drawGame console $ Game state { window = EquipW }
 
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7 = drawGame console $ playerJump g (-1)
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9 = drawGame console $ playerJump g 1
