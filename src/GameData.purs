@@ -38,14 +38,19 @@ unitp :: Point -> Point
 unitp p = {x: sign p.x, y: sign p.y}
 
 type Stats = 
-    { hp  :: Number 
-    , def :: Number
-    , str :: Number
-    , dex :: Number
-    , int :: Number
+    { maxHp :: Number
+    , hp    :: Number 
+    , def   :: Number
+    , str   :: Number
+    , dex   :: Number
+    , int   :: Number
     }
 
-defaultStats = { hp: 10, def: 10, str: 10, dex: 10, int: 10}
+defaultStats = { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 10}
+
+statsToString :: Stats -> String
+statsToString { maxHp = mh, hp  = h, def = de, str = s, dex = d, int = i } = "Hp: " ++ show h ++ "/" ++ show mh ++ ". Defence: " ++ show de ++ ". Str: " ++ show s ++ ". Dex: " ++ show d ++ ". Int: " ++ show i ++"."
+statsToString _ = ""
 
 statModf :: Number -> Number
 statModf x = -5 + floor (x / 2)
@@ -58,9 +63,9 @@ type Skills = M.Map SkillType Skill
 
 instance showSkillType :: Show SkillType where
     show WeaponSkill = "weapon"
-    show Sneak = "sneaking"
-    show Athletics = "athletics"
-    show Lockpick = "lockpicking"
+    show Sneak       = "sneaking"
+    show Athletics   = "athletics"
+    show Lockpick    = "lockpicking"
 
 instance ordSkillType :: Ord SkillType where
     compare a b = compare (show a) (show b)
@@ -76,6 +81,15 @@ defaultSkills = M.fromList [Tuple WeaponSkill {level: 0, prog: 0}
                            ,Tuple Lockpick { level: 0, prog: 0}
                            ]
 
+skillsInfo :: Skills -> String
+skillsInfo skills = skillsToString $ M.toList skills
+    where
+        skillToString :: Tuple SkillType Skill -> String
+        skillToString (Tuple sType { level = l, prog = p }) = fill (show sType ++ " skill. ") 21 ++ fill (" Level: " ++ show l ++ ".") 11 ++ " Progress (0 - " ++ show (100 + l * 20) ++ "): " ++ show p ++"\n"
+
+        skillsToString :: [Tuple SkillType Skill] -> String
+        skillsToString [] = ""
+        skillsToString (x:xs) = skillToString x ++ ("\n") ++ skillsToString xs
 
 data CreatureType = Player | Guard | Archer | Peasant
 

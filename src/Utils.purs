@@ -6,6 +6,7 @@ import Data.Monoid
 import Data.Foldable
 import Data.Traversable
 import qualified Data.String.Unsafe as SU
+import qualified Data.String as S
 
 
 (>>) :: forall a b m. (Monad m) => m a -> m b -> m b
@@ -54,3 +55,8 @@ foreign import toHex
         return n.toString(16);
     }
     """ :: Number -> String
+
+fill :: String -> Number -> String
+fill xs number | (S.length xs) == number = xs
+fill xs number | (S.length xs) < number  = fill (xs ++ " ") number
+fill xs _ = xs
