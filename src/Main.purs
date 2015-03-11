@@ -396,13 +396,13 @@ pickUp point (Game state) =
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
-onKeyPress console (Game state@{window = InventoryW }) key | key == 73 = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{window = GameW })      key | key == 73 = drawGame console $ Game state { window = InventoryW }
-onKeyPress console g@(Game state) key | key == numpad 7 = drawGame console $ playerJump g (-1)
-onKeyPress console g@(Game state) key | key == numpad 9 = drawGame console $ playerJump g 1
-onKeyPress console g@(Game state) key | key == numpad 8 = drawGame console $ playerJump g 0
-onKeyPress console g@(Game state) key | key == 80       = drawGame console $ pickUp (state.player.pos) g
-onKeyPress console g@(Game state) key =
+onKeyPress console (Game state@{window = InventoryW }) key  | key == 73       = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{window = GameW })      key  | key == 73       = drawGame console $ Game state { window = InventoryW }
+onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 7 = drawGame console $ playerJump g (-1)
+onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 9 = drawGame console $ playerJump g 1
+onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 8 = drawGame console $ playerJump g 0
+onKeyPress console g@(Game state@{window = GameW }) key     | key == 80       = drawGame console $ pickUp (state.player.pos) g
+onKeyPress console g@(Game state@{window = GameW }) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
         Nothing    -> return g
