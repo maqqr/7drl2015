@@ -131,8 +131,7 @@ prefixMod Godly      = { damageMod:  4, weightMod: 0, attackSpeedMod: 0 }
 prefixMod _          = zeromod
 
 showPrefix :: [WeaponPrefix] -> String
-showPrefix []     = ""
-showPrefix (x:xs) = show x ++ showPrefix xs
+showPrefix = joinWith " " <<< map show
 
 instance showWeaponPrefix :: Show WeaponPrefix where
     show Rusty      = "rusty"
@@ -176,7 +175,8 @@ type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number
 -- Final item information functions:
 
 -- todo: calculate weight with prefixes
--- itemWeight = ...
+itemWeight :: Item -> Number
+itemWeight i = i.weight
 
 -- todo: use prefixes
 itemDamage :: Item -> Number
@@ -184,7 +184,5 @@ itemDamage { itemType = Weapon w } = baseDamage w.weaponType
 itemDamage _ = 0
 
 showItem :: Item -> String
---showItem i@( { w@( Weapon _ ), weight = we } ) = show w  ++ ", Dmg: " ++ show i ++ ", Weight: " ++ show we
--- or (neather works) 
---showItem ( Item { itemType = (Weapon { weaponType = w, prefix = pre }), weight = we } ) = show (Weapon { weaponType = w, prefix = pre }) ++ ", Dmg: " ++ show (itemDamage ( Item { t@{ Weapon w }, weight = we } )) ++ ", Weight: " ++ show we
-showItem _ = "Empty"
+showItem i@{ itemType = Weapon _ } = show i.itemType ++ ", Dmg: " ++ show (itemDamage i) ++ ", Weight: " ++ show (itemWeight i)
+showItem i = show i.itemType
