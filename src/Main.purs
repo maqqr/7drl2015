@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Control.Monad.Eff
 import qualified Control.Monad.JQuery as J
 import Debug.Trace
+import Math
 
 import Graphics.CanvasConsole
 import GameData
@@ -29,13 +30,16 @@ data GameState = Game { level         :: Level
                       , npcs          :: [Creature]
                       , items         :: [Item]
                       , playerName    :: String
-                      , points        :: Number
-                      , skills        :: [Skill]
+                      , points        :: Number -- Value of stolen loot.
+                      , skills        :: Skills
                       , inventory     :: [Item]
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
                       , pathfinder    :: Pathfinder
                       , window        :: GameWindow
+                      , seed          :: Number  -- Seed for random number generator.
+                      , blinkTimer    :: Number
+                      , blink         :: Boolean -- Blinking indicators are drawn when true.
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -52,34 +56,103 @@ initialState pname = Game
         , skills: defaultSkills
         , inventory: []
         , freeFallTimer: 0
-        , messageBuf: map ((++) "Line" <<< show) (1 .. 4)
+        , messageBuf: []
         , pathfinder: makePathfinder (levelWeights lvl)
         , window: GameW
+        , seed: 456977
+        , blinkTimer: 0
+        , blink: false
         }
     where
         lvl = stringToLevel testLevel
 
-        pl = { pos: {x: 4, y: 3}, ctype: Player, stats: defaultStats, time: 0, vel: zerop }
+        pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
-        testGuard = { pos: {x: 10, y: 20}, ctype: Guard, stats: defaultStats, time: 0, vel: zerop }
-        testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
+        testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
+        testItem1 = { itemType: Weapon { weaponType: Sword, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
+-- Generates random number.
+generate :: GameState -> { n :: Number, game :: GameState }
+generate (Game state) =
+    let new = (a * state.seed + c) % m in { n: new, game: Game state { seed = new } }
+    where
+        a = 0x343FD
+        c = 0x269EC
+        m = pow 32 2
+
+-- Generates random integer between min' and max'
+randInt :: Number -> Number -> GameState -> { n :: Number, game :: GameState }
+randInt min' max' g = let gg = generate g in  gg { n = min' + (gg.n % (max' - min')) }
+
+-- Generates random point.
+randomPoint :: GameState -> { p :: Point, game :: GameState }
+randomPoint g@(Game { level = (Level level) }) =
+    let x = randInt 0 level.width g
+        y = randInt 0 level.height x.game
+    in { p: {x: x.n, y: y.n}, game: y.game }
+
+-- Maximum message buffer size.
 messageBufSize :: Number
 messageBufSize = 4
 
+-- Uses skill and gets experience.
+useSkill :: SkillType
+         -> Number -- Odds of success when unskilled (0 - 99)
+         -> Number -- Experience gained
+         -> GameState
+         -> { success :: Boolean, game :: GameState }
+useSkill skillType odds expr g@(Game state) = { success: success, game: addExp gen.game }
+    where
+        gen       = randInt 0 99 g
+        finalOdds = odds * pow 1.2 (fromMaybe 0 $ (\s -> s.level) <$> M.lookup skillType state.skills)
+        success   = gen.n < finalOdds
+        addExp g@(Game state) | success = -- Skill increases with successes
+            let skill        = fromMaybe { level: 0, prog: 0 } $ M.lookup skillType state.skills
+                updatedSkill = increaseSkill skill
+                gotLevel     = updatedSkill.level > skill.level
+            in addLevelUpMsg gotLevel updatedSkill.level $ Game state { skills = M.insert skillType updatedSkill state.skills }
+        addExp g@(Game state) | otherwise = g -- No experience gained
+
+        expRequired :: Number -> Number
+        expRequired lvl = 100 + 20 * lvl
+
+        addLevelUpMsg :: Boolean -> Number -> GameState -> GameState
+        addLevelUpMsg true newlvl = addMsg $ "Your " ++ show skillType ++ " skill increased to " ++ show newlvl ++ "."
+        addLevelUpMsg _ _         = id
+
+        increaseSkill :: Skill -> Skill
+        increaseSkill skill | skill.prog + expr >= expRequired skill.level =
+            skill { level = skill.level + 1, prog = skill.prog + expr - expRequired skill.level }
+        increaseSkill skill | otherwise =
+            skill { prog = skill.prog + expr }
+
+
+-- Adds message to the message buffer.
 addMsg :: String -> GameState -> GameState
 addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
     Game state { messageBuf = drop 1 state.messageBuf ++ [msg] }
 addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
+-- Updates blinking timer.
+updateBlinkTimer :: Number -> GameState -> GameState
+updateBlinkTimer dt (Game state) | state.blinkTimer > 0.5 = Game state { blink = not state.blink, blinkTimer = 0 }
+updateBlinkTimer dt (Game state) | otherwise              = Game state { blinkTimer = state.blinkTimer + dt }
+
+-- Draws the game when state.blink changes to true or false.
+blinkDraw :: Console -> GameState -> ConsoleEff GameState
+blinkDraw console g@(Game state) | state.blinkTimer == 0 = drawGame console g
+blinkDraw console g@(Game state) | otherwise             = return g
+
+-- onUpdate is called as often as possible.
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
-    drawGame console <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
+    drawGame console <<< updateBlinkTimer dt <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
-    return $ Game state { freeFallTimer = state.freeFallTimer + dt }
+    blinkDraw console <<< updateBlinkTimer dt $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
 
+-- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game { window = EquipW }) = do
     --TODO: drawing equipment window
@@ -116,6 +189,9 @@ drawGame console g@(Game state) = do
             y' <- 0 .. 19
             return {x: x', y: y'}
 
+        inViewport :: Point -> Boolean
+        inViewport p = p.x >= 0 && p.y >= 0 && p.x < 80 && p.y < 20
+
         pointsAroundPlayer :: Number -> [Point]
         pointsAroundPlayer r = do
             x' <- (state.player.pos.x - r) .. (state.player.pos.x + r)
@@ -136,8 +212,23 @@ drawGame console g@(Game state) = do
         drawChar' pos c col = drawChar console c col pos.x pos.y
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
-        drawCreature offset c | playerCanSee c.pos = drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
-        drawCreature offset c | otherwise          = return unit
+        drawCreature offset c | playerCanSee c.pos && inViewport (c.pos .+. offset) =
+            drawAlertness (c.pos .+. offset .+. {x: 0, y: -1}) c.ai
+            >> drawFacing (c.pos .+. offset) c.dir
+            >> drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
+        drawCreature offset c | otherwise = return unit
+
+        drawAlertness :: Point -> AI -> ConsoleEff Unit
+        drawAlertness p (AI _        Sleep)    | state.blink = drawChar' p "Z" "FFFFFF"
+        drawAlertness p (AI MightSee _ )       | state.blink = drawChar' p "?" "555555"
+        drawAlertness p (AI (Suspicious _) _ ) | state.blink = drawChar' p "?" "FFFF11"
+        drawAlertness p (AI (Alert _) _ )      | state.blink = drawChar' p "!" "FF0000"
+        drawAlertness p _ = return unit
+
+        drawFacing :: Point -> Point -> ConsoleEff Unit
+        drawFacing p dir | dir.x < 0 && state.blink = drawChar' (p .+. {x: -1, y: 0}) ">" "00FF00"
+        drawFacing p dir | dir.x > 0 && state.blink = drawChar' (p .+. {x:  1, y: 0}) "<" "00FF00"
+        drawFacing p dir | otherwise = return unit
 
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
         drawCreatureType d Player  = d "@" "FF0000"
@@ -150,8 +241,9 @@ drawGame console g@(Game state) = do
         fromCode = singleton <<< fromCharCode
 
         drawItem :: Point -> Item -> ConsoleEff Unit
-        drawItem offset i | playerCanSee i.pos = drawItemType (drawChar' (i.pos .+. offset)) i.itemType
-        drawItem offset i | otherwise          = return unit
+        drawItem offset i | playerCanSee i.pos && inViewport (i.pos .+. offset) =
+            drawItemType (drawChar' (i.pos .+. offset)) i.itemType
+        drawItem offset i | otherwise = return unit
 
         drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
         drawItemType d (Loot _)   = d "$" "FFAA00"
@@ -162,6 +254,7 @@ drawGame console g@(Game state) = do
         drawTileWithFov p d t | otherwise      = d (fromCode 178) "111111"
 
         playerCanSee :: Point -> Boolean
+        -- playerCanSee p = true
         playerCanSee p | distanceSq state.player.pos p > 12 * 12 = false
         playerCanSee p | otherwise = lineOfSight state.level state.player.pos p
 
@@ -246,14 +339,66 @@ updateCreatures advance g@(Game state') =
 
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
-        updateCreatureOnce i game = modifyCreatureAt i game $ \c -> updateAI c --updatePhysics game
+        updateCreatureOnce i g@(Game state) =
+            let newAlertAI   = updateAlertness (get i g NoAI (\c -> c.ai))
+                changedAlert = modifyCreatureAt i g (\c ->c { ai = newAlertAI })
+            in updateAI changedAlert newAlertAI -- add updatePhysics?
             where
-                updateAI c = case head (pathToPlayer game c.pos) of
-                                Just p  -> c { pos = p }
-                                Nothing -> c
+                -- Creature position
+                cpos :: Point
+                cpos = get i g zerop (\c -> c.pos)
+
+                canSeePlayer :: Boolean
+                canSeePlayer = lineOfSight state.level cpos state.player.pos
+
+                updateAlertness :: AI -> AI
+                updateAlertness (AI NoAlert st)  | canSeePlayer = AI MightSee st
+                updateAlertness (AI NoAlert st)  | otherwise    = AI NoAlert st
+                updateAlertness (AI MightSee st) | canSeePlayer = AI (Suspicious 1) st
+                updateAlertness (AI MightSee st) | otherwise    = AI NoAlert st
+                updateAlertness (AI (Suspicious n) st) | n == 0                = AI NoAlert st
+                updateAlertness (AI (Suspicious n) st) | not canSeePlayer      = AI (Suspicious (n - 1)) st
+                updateAlertness (AI (Suspicious n) st) | canSeePlayer && n < 4 = AI (Suspicious (n + 1)) st
+                updateAlertness (AI (Suspicious n) st) | otherwise             = AI (Alert 10) st
+                updateAlertness (AI (Alert n) st) | canSeePlayer = AI (Alert 10) st
+                updateAlertness (AI (Alert n) st) | n == 0       = AI NoAlert st
+                updateAlertness (AI (Alert n) st) | otherwise    = AI (Alert (n - 1)) st
+                updateAlertness x = x
+
+                newPatrolPoint :: GameState -> { p :: Point, game :: GameState }
+                newPatrolPoint g' = let points = validPatrolPoints
+                                        gen    = randInt 0 (length points - 1) g'
+                                    in { p: fromMaybe zerop (points !! gen.n), game: gen.game }
+
+                validPatrolPoints :: [Point]
+                validPatrolPoints = filter canWalkOn $ levelPoints state.level
+                    where
+                        canWalkOn p = isValidMove state.level p && not (isValidMove state.level (p .+. {x: 0, y: 1}))
+
+                updateAI :: GameState -> AI -> GameState
+                updateAI g (AI (Alert _) _)      = modifyCreatureAt i g $ moveToPlayer
+                updateAI g (AI (Suspicious _) _) = modifyCreatureAt i g $ moveToPlayer
+                updateAI g (AI _ (Idle p))       = modifyCreatureAt i g $ moveToPoint p
+                updateAI g (AI a (Patrol p)) =
+                    if length (pathToPoint g cpos p) <= 2 then
+                        let gen = newPatrolPoint g
+                        in modifyCreatureAt i gen.game (\c -> c { ai = AI a (Patrol gen.p) })
+                    else modifyCreatureAt i g $ moveToPoint p
+                updateAI g _ = g
+
+                moveToPoint p c = case head (pathToPoint g c.pos p) of
+                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
+                                   Nothing -> c
+
+                moveToPlayer c = case head (pathToPlayer g c.pos) of
+                                   Just p'  -> c { pos = p', dir = p' .-. cpos }
+                                   Nothing -> c
+
+        pathToPoint :: GameState -> Point -> Point -> [Point]
+        pathToPoint (Game state) start end = findPath state.pathfinder start end
 
         pathToPlayer :: GameState -> Point -> [Point]
-        pathToPlayer (Game state) start = findPath state.pathfinder start (groundProject state.player.pos)
+        pathToPlayer g@(Game state) start = pathToPoint g start (groundProject state.player.pos)
             where
                 -- Projects position to ground or climbable tile.
                 groundProject :: Point -> Point
@@ -278,6 +423,7 @@ updatePhysics g@(Game state) c | inFreeFall state.level c = move g fc (unitp fc.
         fc = c { vel = { x: finalVelX, y: gc.vel.y } }
 updatePhysics _ c = c { vel = zerop }
 
+-- Moves an object with position. Checks collisions with solid tiles.
 move :: forall r. GameState -> { pos :: Point | r } -> Point -> { pos :: Point | r }
 move (Game state) c delta =
     if blocked then c else c { pos = newpos }
@@ -290,7 +436,10 @@ move (Game state) c delta =
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 (w state.level - 1), y: clamp pos.y 0 (h state.level - 1) }
 
-updateWorld :: Boolean -> Number -> GameState -> GameState
+-- Updates the game world.
+updateWorld :: Boolean -- Update player also?
+            -> Number  -- How many time units the game world advances
+            -> GameState -> GameState
 updateWorld updatePlayer advance =
     updateCreatures advance >>> (if updatePlayer then updatePlayerPhysics else id) >>> updateItemPhysics
     where
@@ -301,6 +450,7 @@ updateWorld updatePlayer advance =
 
         updateItemPhysics (Game state) = Game state { items = map (updatePhysics (Game state)) state.items }
 
+-- Sets tile at point p to tile t. Recalculates pathfinding graph.
 setTile' :: Point -> Tile -> GameState -> GameState
 setTile' p t (Game state) = let newlevel = setTile state.level p t
                             in Game state { level = newlevel, pathfinder = makePathfinder (levelWeights newlevel) }
@@ -332,6 +482,7 @@ carryingWeight (x:xs) = x.weight + (carryingWeight xs)
 maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
+-- Calculates speed value for a creature.
 calcSpeed :: GameState -> [Item] -> Creature -> Number
 calcSpeed (Game state) inv c | isClimbable state.level c.pos = 1500
 calcSpeed (Game state) inv c | inFreeFall state.level c      = 500
@@ -349,16 +500,23 @@ calcSpeed (Game state) inv c | otherwise                     = 1000 - (c.stats.d
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) =
     if canMove then
-        updateWorld false (calcSpeed g state.inventory state.player) $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+        updateWorld false (calcSpeed g state.inventory state.player) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
         else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
+        useAthletics :: GameState -> GameState
+        useAthletics g@(Game state) = (useSkill Athletics 50 20 g).game
+
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
 
         checkTile :: Tile -> GameState
         checkTile DoorClosed = addMsg "You open the door." $ setTile' newpos DoorOpen g
-        checkTile DoorLocked = addMsg "The door is locked. You pick the lock." $ setTile' newpos DoorClosed g
+        checkTile DoorLocked = pickLock
         checkTile _          = g
+
+        pickLock = let use = useSkill Lockpick 10 20 g
+                   in if use.success then addMsg "The door is locked. You managed to pick the lock." $ setTile' newpos DoorClosed use.game
+                   else addMsg "The door is locked. You fail to pick the lock." use.game
 
 playerJump :: GameState -> Number -> GameState
 playerJump g@(Game state) xdir | not (isValidMove state.level (state.player.pos .+. {x: xdir, y: -1})) =
@@ -379,6 +537,7 @@ movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
                           ,numpad 1 // {x: -1, y:  1}
                           ,numpad 3 // {x:  1, y:  1}]
 
+-- Player tries to pick up an item.
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of

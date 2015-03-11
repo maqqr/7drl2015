@@ -23,6 +23,7 @@
     "purescript-foreign"              : "0.3.0",
     "purescript-jquery"               : "0.3.0",
     "purescript-maps"                 : "0.2.0",
-    "purescript-tuples"               : "0.2.3"
+    "purescript-tuples"               : "0.2.3",
+    "purescript-math"                 : "0.1.0"
   }
 }

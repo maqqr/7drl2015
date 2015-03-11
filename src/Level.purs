@@ -50,6 +50,7 @@ isTileClimbable DoorClosed = true
 isTileClimbable DoorLocked = true
 isTileClimbable _          = false
 
+-- Calculates tile weights for pathfinding.
 levelWeights :: Level -> [[Number]]
 levelWeights l@(Level level) = do
     y <- 0 .. (level.height - 1)
@@ -97,6 +98,7 @@ setTile :: Level -> Point -> Tile -> Level
 setTile l@(Level level) p newTile =
     Level $ level { tiles = updateAt (index l p.x p.y) newTile level.tiles }
 
+-- Returns all points inside level.
 levelPoints :: Level -> [Point]
 levelPoints (Level level) = do
     x' <- 0 .. (level.width - 1)
