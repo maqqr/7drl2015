@@ -69,7 +69,7 @@ initialState pname = Game
         pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
         testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
-        testItem1 = { itemType: Weapon { dmg: 1, attackBonus: 1 }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
+        testItem1 = { itemType: Weapon { weaponType: Sword, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
 
 -- Generates random number.
