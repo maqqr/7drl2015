@@ -136,6 +136,12 @@ addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
     Game state { messageBuf = drop 1 state.messageBuf ++ [msg] }
 addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
+-- Draws the message buffer.
+drawMessages :: Console -> Point -> Number -> [String] -> ConsoleEff Unit
+drawMessages console p col (x:xs) = drawString console x (rgb col col col) p.x p.y
+                                 >> drawMessages console {x: p.x, y: p.y + 1} (col + 50) xs
+drawMessages _       _ _   []     = return unit
+
 -- Updates blinking timer.
 updateBlinkTimer :: Number -> GameState -> GameState
 updateBlinkTimer dt (Game state) | state.blinkTimer > 0.5 = Game state { blink = not state.blink, blinkTimer = 0 }
@@ -191,7 +197,7 @@ drawGame console g@(Game state) = do
     drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
-    drawStrings {x: 1, y: 20} "FFFFFF" state.messageBuf
+    drawMessages console {x: 1, y: 20} 50 state.messageBuf
     return g
     where
         viewportPoints :: [Point]
@@ -214,13 +220,13 @@ drawGame console g@(Game state) = do
             where
                 pInWorld = p .-. offset
 
+        drawChar' :: Point -> String -> String -> ConsoleEff Unit
+        drawChar' pos c col = drawChar console c col pos.x pos.y
+
         drawStrings :: Point -> String -> [String] -> ConsoleEff Unit
         drawStrings p col (x:xs) = drawString console x col p.x p.y
                                 >> drawStrings {x: p.x, y: p.y + 1} col xs
-        drawStrings _  _  []     = return unit
-
-        drawChar' :: Point -> String -> String -> ConsoleEff Unit
-        drawChar' pos c col = drawChar console c col pos.x pos.y
+        drawStrings _ _  []      = return unit
 
         drawCreature :: Point -> Creature -> ConsoleEff Unit
         drawCreature offset c | playerCanSee c.pos && inViewport (c.pos .+. offset) =
