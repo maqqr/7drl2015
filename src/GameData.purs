@@ -106,22 +106,29 @@ type Creature =
     , ai    :: AI
     }
 
+type WeaponMod = { damageMod :: Number, weightMod :: Number, attackSpeedMod :: Number }
+
 data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine
+
+materialMod :: Material -> WeaponMod
+materialMod Wood = { damageMod: -2, weightMod: -1, attackSpeedMod: 1 }
+materialMod _ = zeromod
+
+zeromod :: WeaponMod
+zeromod = { damageMod: 0, weightMod: 0, attackSpeedMod:0 }
 
 data WeaponPrefix = Broken | Rusty | Dull | Sharp | Lethal | Masterwork | Light | Balanced | Heavy | Godly
 
-prefixDamageMod :: WeaponPrefix -> Number
-prefixDamageMod Broken     = -3
-prefixDamageMod Rusty      = -2
-prefixDamageMod Dull       = -1
-prefixDamageMod Sharp      = 1
-prefixDamageMod Lethal     = 2
-prefixDamageMod Masterwork = 3
-prefixDamageMod Godly      = 4
-prefixDamageMod _ = 0
-
-prefixWeightMod :: WeaponPrefix -> Number
-prefixWeightMod _ = 0 -- todo
+-- todo: add correct values
+prefixMod :: WeaponPrefix -> WeaponMod
+prefixMod Broken     = { damageMod: -3, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Rusty      = { damageMod: -2, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Dull       = { damageMod: -1, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Sharp      = { damageMod:  1, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Lethal     = { damageMod:  2, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Masterwork = { damageMod:  3, weightMod: 0, attackSpeedMod: 0 }
+prefixMod Godly      = { damageMod:  4, weightMod: 0, attackSpeedMod: 0 }
+prefixMod _          = zeromod
 
 showPrefix :: [WeaponPrefix] -> String
 showPrefix []     = ""
@@ -171,8 +178,9 @@ type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number
 -- todo: calculate weight with prefixes
 -- itemWeight = ...
 
+-- todo: use prefixes
 itemDamage :: Item -> Number
-itemDamage { itemType = Weapon w } = baseDamage w.weaponType + sum (map prefixDamageMod w.prefix)
+itemDamage { itemType = Weapon w } = baseDamage w.weaponType
 itemDamage _ = 0
 
 showItem :: Item -> String
