@@ -3,6 +3,7 @@ module GameData where
 import Data.Tuple
 import Data.Array (map)
 import Data.String
+import Data.Monoid
 import Data.Foldable
 import qualified Data.Map as M
 import Utils
@@ -106,29 +107,47 @@ type Creature =
     , ai    :: AI
     }
 
-type WeaponMod = { damageMod :: Number, weightMod :: Number, attackSpeedMod :: Number }
+--------- WEAPON STAT ---------
+
+type WeaponStatRecord = { damage :: Number, weight :: Number, attackSpeed :: Number, attackBonus :: Number }
+
+data WeaponStat = WeaponStat WeaponStatRecord
+
+extractStat :: WeaponStat -> WeaponStatRecord
+extractStat (WeaponStat s) = s
+
+instance semigroupWeaponStat :: Semigroup WeaponStat where
+    (<>) (WeaponStat a) (WeaponStat b) =
+        WeaponStat { damage: a.damage + b.damage
+                   , weight: a.weight + b.weight
+                   , attackSpeed: a.attackSpeed + b.attackSpeed
+                   , attackBonus: a.attackBonus + b.attackBonus
+                   }
+
+instance monoidWeaponStat :: Monoid WeaponStat where
+    mempty = WeaponStat { damage: 0, weight: 0, attackSpeed: 0, attackBonus: 0 }
+
+--------- MATERIALS ---------
 
 data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine
 
-materialMod :: Material -> WeaponMod
-materialMod Wood = { damageMod: -2, weightMod: -1, attackSpeedMod: 1 }
-materialMod _ = zeromod
+materialStat :: Material -> WeaponStat
+materialStat Wood = WeaponStat { damage: -2, weight: -1, attackSpeed: 1, attackBonus: 0 }
+materialStat _ = mempty
 
-zeromod :: WeaponMod
-zeromod = { damageMod: 0, weightMod: 0, attackSpeedMod:0 }
+--------- WEAPON PREFIXES ---------
 
 data WeaponPrefix = Broken | Rusty | Dull | Sharp | Lethal | Masterwork | Light | Balanced | Heavy | Godly
 
--- todo: add correct values
-prefixMod :: WeaponPrefix -> WeaponMod
-prefixMod Broken     = { damageMod: -3, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Rusty      = { damageMod: -2, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Dull       = { damageMod: -1, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Sharp      = { damageMod:  1, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Lethal     = { damageMod:  2, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Masterwork = { damageMod:  3, weightMod: 0, attackSpeedMod: 0 }
-prefixMod Godly      = { damageMod:  4, weightMod: 0, attackSpeedMod: 0 }
-prefixMod _          = zeromod
+prefixStat :: WeaponPrefix -> WeaponStat
+prefixStat Broken     = WeaponStat { damage: -3, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Rusty      = WeaponStat { damage: -2, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Dull       = WeaponStat { damage: -1, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Sharp      = WeaponStat { damage:  1, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Lethal     = WeaponStat { damage:  2, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Masterwork = WeaponStat { damage:  3, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat Godly      = WeaponStat { damage:  4, weight: 0, attackSpeed: 0, attackBonus: 0 }
+prefixStat _          = mempty
 
 showPrefix :: [WeaponPrefix] -> String
 showPrefix = joinWith " " <<< map show
@@ -145,6 +164,8 @@ instance showWeaponPrefix :: Show WeaponPrefix where
     show Heavy      = "heavy"
     show Godly      = "godly"
 
+--------- WEAPON TYPES ---------
+
 data WeaponType = Sword | Axe | Dagger
 
 instance showWeaponType :: Show WeaponType where
@@ -152,37 +173,30 @@ instance showWeaponType :: Show WeaponType where
     show Axe    = "axe"
     show Dagger = "dagger"
 
-baseDamage :: WeaponType -> Number
-baseDamage Sword = 3
-baseDamage Axe   = 5
-baseDamage _     = 0
+weaponTypeStat :: WeaponType -> WeaponStat
+weaponTypeStat Sword  = WeaponStat { damage: 3, weight: 1, attackSpeed: 800,  attackBonus: 1 }
+weaponTypeStat Axe    = WeaponStat { damage: 5, weight: 3, attackSpeed: 1200, attackBonus: 0 }
+weaponTypeStat Dagger = WeaponStat { damage: 1, weight: 1, attackSpeed: 600,  attackBonus: 2 }
 
-baseAttackBonus :: WeaponType -> Number
-baseAttackBonus Sword = 2
-baseAttackBonus Axe   = 0
-baseAttackBonus _     = 0
+--------- ITEM TYPES ---------
 
 data ItemType = Loot   { value :: Number }
-              | Weapon { weaponType :: WeaponType, prefix :: [WeaponPrefix] }
+              | Weapon { weaponType :: WeaponType, material :: Material, prefix :: [WeaponPrefix] }
 
 instance showItemType :: Show ItemType where
-    show (Loot   { value = val })                         = (show val) ++ " $"
+    show (Loot   { value = val })                         = show val ++ " $"
     show (Weapon { weaponType = t, prefix = [] })         = show t
-    show (Weapon { weaponType = t, prefix = prefixList }) = (showPrefix prefixList) ++ " " ++ (show t)
+    show (Weapon { weaponType = t, prefix = prefixList }) = showPrefix prefixList ++ " " ++ show t
 
-type Item = { itemType :: ItemType, pos :: Point, vel :: Point, weight :: Number }
 
--- Final item information functions:
+--------- ITEM ---------
 
--- todo: calculate weight with prefixes
-itemWeight :: Item -> Number
-itemWeight i = i.weight
+type Item = { itemType :: ItemType, pos :: Point, vel :: Point }
 
--- todo: use prefixes
-itemDamage :: Item -> Number
-itemDamage { itemType = Weapon w } = baseDamage w.weaponType
-itemDamage _ = 0
+itemStat :: Item -> WeaponStatRecord
+itemStat { itemType = Weapon w } = extractStat (materialStat w.material <> weaponTypeStat w.weaponType <> (monoidSum <<< map prefixStat $ w.prefix))
+itemStat _ = extractStat mempty
 
 showItem :: Item -> String
-showItem i@{ itemType = Weapon _ } = show i.itemType ++ ", Dmg: " ++ show (itemDamage i) ++ ", Weight: " ++ show (itemWeight i)
+showItem i@{ itemType = Weapon _ } = let s = itemStat i in show i.itemType ++ ", Dmg: " ++ show (s.damage) ++ ", Weight: " ++ show (s.weight)
 showItem i = show i.itemType

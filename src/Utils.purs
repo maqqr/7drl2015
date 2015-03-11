@@ -2,6 +2,7 @@ module Utils where
 
 import Data.Char
 import Data.Tuple
+import Data.Monoid
 import Data.Foldable
 import Data.Traversable
 import qualified Data.String.Unsafe as SU
@@ -11,6 +12,9 @@ import qualified Data.String.Unsafe as SU
 (>>) f g = f >>= \_ -> g
 
 (//) = Tuple
+
+monoidSum :: forall a. (Monoid a) => [a] -> a
+monoidSum = foldr (<>) mempty
 
 clamp :: forall a. (Ord a) => a -> a -> a -> a
 clamp x min max | x < min = min

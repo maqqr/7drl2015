@@ -69,9 +69,9 @@ initialState pname = Game
         pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
         testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
-        testItem1 = { itemType: Weapon { weaponType: Sword, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
-        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0}, weight: 1 }
-        testItem3 = { itemType: Weapon { weaponType: Axe, prefix: [] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0}, weight: 4 }
+        testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }
+        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0} }
+        testItem3 = { itemType: Weapon { weaponType: Axe, material: Steel, prefix: [Rusty] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0} }
 
 -- Generates random number.
 generate :: GameState -> { n :: Number, game :: GameState }
@@ -484,7 +484,7 @@ isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
 
 carryingWeight :: [Item] -> Number
 carryingWeight [] = 0
-carryingWeight (x:xs) = x.weight + (carryingWeight xs)
+carryingWeight (x:xs) = (itemStat x).weight + (carryingWeight xs)
 
 maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
