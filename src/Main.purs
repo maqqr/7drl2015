@@ -135,13 +135,13 @@ useSkill skillType odds expr g@(Game state) = { success: success, game: addExp g
 -- Adds message to the message buffer.
 addMsg :: String -> GameState -> GameState
 addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
-    Game state { messageBuf = drop 1 state.messageBuf ++ [msg] }
+    Game state { messageBuf = msg : Data.Array.take (messageBufSize - 1) state.messageBuf }
 addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
 
 -- Draws the message buffer.
 drawMessages :: Console -> Point -> Number -> [String] -> ConsoleEff Unit
 drawMessages console p col (x:xs) = drawString console x (rgb col col col) p.x p.y
-                                 >> drawMessages console {x: p.x, y: p.y + 1} (col + 50) xs
+                                 >> drawMessages console {x: p.x, y: p.y - 1} (col - 50) xs
 drawMessages _       _ _   []     = return unit
 
 drawStrings :: Console -> Point -> String -> [String] -> ConsoleEff Unit
@@ -174,14 +174,14 @@ drawGame console g@(Game state@{ window = EquipW }) = do
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
     drawString console "Equipments: " "AAAAAA" 2 4
     --TODO: equipment system
-    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
+    drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
 drawGame console g@(Game state@{ window = InventoryW { index = page , command = com }, inventory = inv }) = do
     clear console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
     drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
     drawInventoryPage inv 0 (page * 10) 4 5
-    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
+    drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
         where
             drawItemInfo :: Maybe Item -> Number -> Number -> ConsoleEff Unit
@@ -205,7 +205,7 @@ drawGame console g@(Game state) = do
     drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
-    drawMessages console {x: 1, y: 20} 50 state.messageBuf
+    drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
     where
         viewportPoints :: [Point]
