@@ -29,6 +29,9 @@ sign x | otherwise = 0
 makeChar :: String -> Char
 makeChar = SU.charAt 0
 
+makeCharCode :: String -> Number
+makeCharCode = toCharCode <<< makeChar
+
 numpad :: Number -> Number
 numpad key = 96 + key
 

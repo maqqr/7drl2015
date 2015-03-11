@@ -21,6 +21,17 @@ import Line
 
 strlen = Data.String.length
 
+data MovementMode = NormalMode | SneakMode | RunMode
+
+instance showMovementMode :: Show MovementMode where
+    show NormalMode = "normal"
+    show SneakMode  = "sneak"
+    show RunMode    = "run"
+
+instance eqMovementMode :: Eq MovementMode where
+    (==) a b = show a == show b
+    (/=) a b = not (a == b)
+
 data InventoryCommand = Drop | Use | NoCommand
 
 data GameWindow = GameW
@@ -42,6 +53,7 @@ data GameState = Game { level         :: Level
                       , seed          :: Number  -- Seed for random number generator.
                       , blinkTimer    :: Number
                       , blink         :: Boolean -- Blinking indicators are drawn when true.
+                      , move          :: MovementMode
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -64,6 +76,7 @@ initialState pname = Game
         , seed: 456977
         , blinkTimer: 0
         , blink: false
+        , move: NormalMode
         }
     where
         lvl = stringToLevel testLevel
@@ -162,7 +175,7 @@ blinkDraw console g@(Game state) | otherwise             = return g
 -- onUpdate is called as often as possible.
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
 onUpdate console dt g@(Game state) | playerCannotAct state.level state.player && state.freeFallTimer > 0.1 =
-    drawGame console <<< updateBlinkTimer dt <<< updateWorld true (calcSpeed g state.inventory state.player) $ Game state { freeFallTimer = 0 }
+    drawGame console <<< updateBlinkTimer dt <<< updateWorld true (calcSpeed g) $ Game state { freeFallTimer = 0 }
 onUpdate console dt g@(Game state) | otherwise =
     blinkDraw console <<< updateBlinkTimer dt $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
@@ -202,9 +215,9 @@ drawGame console g@(Game state) = do
     mapM_ (drawItem offset) state.items
     mapM_ (drawCreature offset) state.npcs
     drawCreature offset state.player
-    drawString console (state.playerName) "FF0000" 2 23
     drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
+    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 25 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
     where
@@ -355,8 +368,8 @@ updateCreatures advance g@(Game state') =
 
         -- Updates creature at index i until it runs out of time.
         updateCreature :: Number -> GameState -> GameState
-        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcSpeed game []) =
-            updateCreature i (modifyCreatureAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcSpeed game [] c }))
+        updateCreature i game | get i game 0 (\c -> c.time) >= get i game 0 (calcNpcSpeed game) =
+            updateCreature i (modifyCreatureAt i (updateCreatureOnce i game) (\c -> c { time = c.time - calcNpcSpeed game c }))
         updateCreature i game | otherwise = game
 
         -- Creature at index i does a single action.
@@ -370,8 +383,14 @@ updateCreatures advance g@(Game state') =
                 cpos :: Point
                 cpos = get i g zerop (\c -> c.pos)
 
+                lookingAtPlayer :: Boolean
+                lookingAtPlayer | get i g false (\c -> c.dir.x == 0)                               = true
+                lookingAtPlayer | get i g false (\c -> c.dir.x < 0) && cpos.x > state.player.pos.x = true
+                lookingAtPlayer | get i g false (\c -> c.dir.x > 0) && cpos.x < state.player.pos.x = true
+                lookingAtPlayer | otherwise = false
+
                 canSeePlayer :: Boolean
-                canSeePlayer = lineOfSight state.level cpos state.player.pos
+                canSeePlayer = lookingAtPlayer && (distanceSq cpos state.player.pos < 10 * 10) && (lineOfSight state.level cpos state.player.pos)
 
                 updateAlertness :: AI -> AI
                 updateAlertness (AI NoAlert st)  | canSeePlayer = AI MightSee st
@@ -561,22 +580,38 @@ speedWithItems c inv = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWe
         deltaWeight n | n < 100.0 = 400
         deltaWeight n | otherwise = 1000
 
--- Calculates speed value for a creature.
-calcSpeed :: GameState -> [Item] -> Creature -> Number
-calcSpeed (Game state) inv c | isClimbable state.level c.pos && isValidMove state.level (c.pos .+. {x: 0, y: 1}) = 1500
-calcSpeed (Game state) inv c | inFreeFall state.level c = 500
-calcSpeed (Game state) inv c | otherwise = speedWithItems c inv
+calcNpcSpeed :: GameState -> Creature -> Number
+calcNpcSpeed (Game state) c | isClimbable state.level c.pos && isValidMove state.level (c.pos .+. {x: 0, y: 1}) = 1500
+calcNpcSpeed (Game state) c | inFreeFall state.level c = 500
+calcNpcSpeed (Game state) c | otherwise = 1000
+
+-- Movement speed modifier when only sneak affects it.
+sneakSpeedModifier :: GameState -> Number -> Number
+sneakSpeedModifier (Game { move = SneakMode }) speed = floor (speed * 2)
+sneakSpeedModifier _                           speed = speed
+
+-- Movement speed modifier.
+moveModeModifier g@(Game { move = SneakMode }) speed = sneakSpeedModifier g speed
+moveModeModifier (Game { move = RunMode })   speed = floor (speed / 1.5)
+moveModeModifier _                           speed = speed
+
+-- Calculates speed value for player.
+calcSpeed :: GameState -> Number
+calcSpeed g@(Game state) | isClimbable state.level state.player.pos && isValidMove state.level (state.player.pos .+. {x: 0, y: 1}) = sneakSpeedModifier g 1500
+calcSpeed g@(Game state) | inFreeFall state.level state.player = 500
+calcSpeed g@(Game state) | otherwise = moveModeModifier g $ speedWithItems state.player state.inventory
 
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
     in if blockIndex >= 0 then
         updateWorld false (itemStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
         else if canMove then
-            updateWorld false (calcSpeed g state.inventory state.player) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+            updateWorld false (calcSpeed g) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         useAthletics :: GameState -> GameState
-        useAthletics g@(Game state) = (useSkill Athletics 50 20 g).game
+        useAthletics g@(Game state) | not (delta .==. zerop) = (useSkill Athletics 50 20 g).game
+        useAthletics g@(Game state) | otherwise              = g
 
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
@@ -586,10 +621,11 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
         enemyBlocks [] _                         = -1
 
         checkTile :: Tile -> GameState
-        checkTile DoorClosed = addMsg "You open the door." $ setTile' newpos DoorOpen g
-        checkTile DoorLocked = pickLock
+        checkTile DoorClosed = updateWorld false 500 $ addMsg "You open the door." $ setTile' newpos DoorOpen g
+        checkTile DoorLocked = updateWorld false 2000 $ pickLock
         checkTile _          = g
 
+        pickLock :: GameState
         pickLock = let use = useSkill Lockpick 10 20 g
                    in if use.success then addMsg "The door is locked. You managed to pick the lock." $ setTile' newpos DoorClosed use.game
                    else addMsg "The door is locked. You fail to pick the lock." use.game
@@ -670,6 +706,12 @@ onKeyPress console (Game state@{ window = EquipW })       key  | key == 69  = dr
 onKeyPress console (Game state@{ window = GameW })        key  | key == 69  = drawGame console $ Game state { window = EquipW }
 onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
 onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 69  = drawGame console $ Game state { window = EquipW }
+
+-- Change movement mode
+onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" && move == RunMode = drawGame console $ Game state { move = NormalMode }
+onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" && move /= RunMode = drawGame console $ Game state { move = RunMode }
+onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move == SneakMode = drawGame console $ Game state { move = NormalMode }
+onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move /= SneakMode = drawGame console $ Game state { move = SneakMode }
 
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7 = drawGame console $ playerJump g (-1)
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9 = drawGame console $ playerJump g 1
