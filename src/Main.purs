@@ -50,7 +50,7 @@ initialState pname = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
-        , items: [testItem1, testItem2, testItem3] ++ replicate 12 testItem1
+        , items: replicate 12 testItem1 ++ [testItem2, testItem3]
         , playerName: pname
         , points: 0
         , skills: defaultSkills
