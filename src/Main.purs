@@ -23,7 +23,7 @@ strlen = Data.String.length
 
 data GameWindow = GameW
                 | EquipW
-                | InventoryW
+                | InventoryW Number
 
 data GameState = Game { level         :: Level
                       , player        :: Creature
@@ -50,7 +50,7 @@ initialState pname = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
-        , items: [testItem1, testItem2, testItem3]
+        , items: [testItem1, testItem2, testItem3] ++ replicate 12 testItem1
         , playerName: pname
         , points: 0
         , skills: defaultSkills
@@ -69,6 +69,7 @@ initialState pname = Game
         pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
         testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
+
         testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0} }
         testItem3 = { itemType: Weapon { weaponType: Axe, material: Steel, prefix: [Rusty] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0} }
@@ -161,22 +162,25 @@ drawGame console g@(Game { window = EquipW }) = do
     drawString console "Equipments: " "AAAAAA" 2 4
     --TODO: equipment system
     return g
-drawGame console g@(Game { window = InventoryW, inventory = inv }) = do
+drawGame console g@(Game { window = InventoryW page, inventory = inv }) = do
     clear console
-    drawString console "Press i to continue and e to open your equipments." "AAAAAA" 1 1
-    drawString console ("Inventory: (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
-    drawInventory inv 3 5
+    drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
+    drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
+    drawInventoryPage inv 0 page 4 5
     return g
         where
-            drawItemInfo :: Item -> Number -> Number -> ConsoleEff Unit
-            drawItemInfo i x y = drawString console (showItem i) "AAAAAA" x y
-            drawItemInfo _ x y = drawString console "empty"      "AAAAAA" x y
+            drawItemInfo :: Maybe Item -> Number -> Number -> ConsoleEff Unit
+            drawItemInfo Nothing x y  = drawString console "empty"      "AAAAAA" x y
+            drawItemInfo (Just i) x y = drawString console (showItem i) "AAAAAA" x y
+            drawItemInfo _ x y        = drawString console "empty"      "AAAAAA" x y
 
-            drawInventory :: [Item] -> Number -> Number -> ConsoleEff Unit
-            drawInventory [] x y = drawString console "- Empty -" "AAAAAA" x y
-            drawInventory (i:is) x y = do
-                drawItemInfo i x y
-                drawInventory is x (y + 1)
+            drawInventoryPage :: [Item] -> Number -> Number -> Number -> Number -> ConsoleEff Unit
+            drawInventoryPage [] num index x y = drawString console "--- Empty ---" "AAAAAA" x y --End recursion when list is empty.
+            drawInventoryPage _ 10 _ x y        = drawString console "-------------" "AAAAAA" x y --End recursion when full page (10 items) has been drawn.
+            drawInventoryPage items num index x y  = do
+                drawItemInfo ((!!) items index) (x + 5) y
+                drawString console ("(" ++ show num ++ "): ") "AAAAAA" x y
+                drawInventoryPage items (num + 1) (index + 1) x (y + 1)
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
@@ -563,19 +567,25 @@ pickUp point (Game state) =
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 
--- Change game states window with i and e (GameW, EquipW and InventoryW)
-onKeyPress console (Game state@{window = InventoryW }) key  | key == 73       = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{window = GameW })      key  | key == 73       = drawGame console $ Game state { window = InventoryW }
-onKeyPress console (Game state@{window = EquipW })     key  | key == 69       = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{window = GameW })      key  | key == 69       = drawGame console $ Game state { window = EquipW }
-onKeyPress console (Game state@{window = EquipW  })    key  | key == 73       = drawGame console $ Game state { window = InventoryW }
-onKeyPress console (Game state@{window = InventoryW }) key  | key == 69       = drawGame console $ Game state { window = EquipW }
+-- Change page in inventory with + and -
+onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | (key == 187 || key == 107) && floor ((length inv) / 10) <= i = drawGame console $ Game state { window = InventoryW 0, inventory = inv }
+onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | key == 187 || key == 107                                   = drawGame console $ Game state { window = InventoryW (i + 1), inventory = inv }
+onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | (key == 189 || key == 109) && i == 0                         = drawGame console $ Game state { window = InventoryW (floor ((length inv) / 10)), inventory = inv }
+onKeyPress console (Game state@{ window = InventoryW i, inventory = inv }) key | key == 189 || key == 109                                   = drawGame console $ Game state { window = InventoryW (i - 1), inventory = inv }
 
-onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 7 = drawGame console $ playerJump g (-1)
-onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 9 = drawGame console $ playerJump g 1
-onKeyPress console g@(Game state@{window = GameW }) key     | key == numpad 8 = drawGame console $ playerJump g 0
-onKeyPress console g@(Game state@{window = GameW }) key     | key == 80       = drawGame console $ pickUp (state.player.pos) g
-onKeyPress console g@(Game state@{window = GameW }) key =
+-- Change game states window with i and e (GameW, EquipW and InventoryW)
+onKeyPress console (Game state@{ window = InventoryW _ }) key | key == 73  = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = GameW })        key | key == 73  = drawGame console $ Game state { window = InventoryW 0}
+onKeyPress console (Game state@{ window = EquipW })       key | key == 69  = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = GameW })        key | key == 69  = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = EquipW  })      key | key == 73  = drawGame console $ Game state { window = InventoryW 0}
+onKeyPress console (Game state@{ window = InventoryW _ }) key | key == 69  = drawGame console $ Game state { window = EquipW }
+
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7 = drawGame console $ playerJump g (-1)
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9 = drawGame console $ playerJump g 1
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8 = drawGame console $ playerJump g 0
+onKeyPress console g@(Game state@{ window = GameW }) key | key == 80       = drawGame console $ pickUp (state.player.pos) g
+onKeyPress console g@(Game state@{ window = GameW }) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
         Nothing    -> return g
