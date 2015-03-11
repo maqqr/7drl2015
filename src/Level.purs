@@ -15,6 +15,7 @@ data Tile = Air        | Water
           | DoorLocked | DoorClosed | DoorOpen
           | BgCave     | BgHouse
           | Bush       | Stairs
+          | Trunk      | Leaves
 
 data Level = Level
     { width  :: Number
@@ -40,6 +41,7 @@ isTileTransparent DoorLocked = false
 isTileTransparent DoorClosed = false
 isTileTransparent Bush       = false
 isTileTransparent Water      = false
+isTileTransparent Leaves     = false
 isTileTransparent _          = true
 
 isTileClimbable :: Tile -> Boolean
@@ -48,6 +50,7 @@ isTileClimbable Water      = true
 isTileClimbable DoorOpen   = true
 isTileClimbable DoorClosed = true
 isTileClimbable DoorLocked = true
+isTileClimbable Leaves     = true
 isTileClimbable _          = false
 
 -- Calculates tile weights for pathfinding.
@@ -126,6 +129,8 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile c | c == makeChar "B" = Bush
         charToTile c | c == makeChar "=" = Water
         charToTile c | c == makeChar "<" = Stairs
+        charToTile c | c == makeChar "I" = Trunk
+        charToTile c | c == makeChar "%" = Leaves
         charToTile _ = Air
 
 
@@ -170,12 +175,12 @@ testLevel =
     ,"..............................................................................#."
     ,"..............................................#..cc#..cc#..#..c###...ccc#######."
     ,".............................................#ccccccccccccc##cccccccc##ccccccccc"
-    ,"............................................#<cc#ccccccc####cccccccccccccccccccc"
-    ,".........................................#.#c<cc#ccccccccccccccccccccccccccccccc"
-    ,"........................................#cccc<c##ccccccccccccccccccccccccccccccc"
-    ,".......................................#ccccc<cc##ccccc##ccccccccccccccccccccccc"
-    ,"#..........B.............SSSWSSSS.....#ccccc#<cc#ccccccccccccccccccc#cccc#cccc##"
-    ,"#...GGGGGGGGGG...........SCCCCCCS....##cccccc<ccccccc#cccccccccccccccccccccccccc"
+    ,".............%..............................#<cc#ccccccc####cccccccccccccccccccc"
+    ,"............%%%%..%%%....................#.#c<cc#ccccccccccccccccccccccccccccccc"
+    ,"............%I%...%%%...................#cccc<c##ccccccccccccccccccccccccccccccc"
+    ,".............I....%I%..................#ccccc<cc##ccccc##ccccccccccccccccccccccc"
+    ,"#..........B.I.....I.....SSSWSSSS.....#ccccc#<cc#ccccccccccccccccccc#cccc#cccc##"
+    ,"#...GGGGGGGGGG.....I.....SCCCCCCS....##cccccc<ccccccc#cccccccccccccccccccccccccc"
     ,"#==############====#.....SCCCSCCS.#.ccccccccc<cccccccccccBcccccccccccccccccccccc"
     ,"#==############====###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
     ,"==#############====###GGG####*###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"

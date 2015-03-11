@@ -52,7 +52,7 @@ initialState pname = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
-        , items: [testItem1, testItem2, testItem3] ++ replicate 12 testItem1
+        , items: replicate 12 testItem1 ++ [testItem2, testItem3]
         , playerName: pname
         , points: 0
         , skills: defaultSkills
@@ -286,6 +286,8 @@ drawGame console g@(Game state) = do
         drawTile d (Just Bush)       = d (fromCode 172) "009900"
         drawTile d (Just Water)      = d (fromCode 247) "0000FF"
         drawTile d (Just Stairs)     = d "<" "FFFFFF"
+        drawTile d (Just Trunk)      = d "I" "666633"
+        drawTile d (Just Leaves)     = d (fromCode 5) "005500"
         drawTile d _                 = d "?" "FFFFFF"
 
 drawGame console MainMenu = do
