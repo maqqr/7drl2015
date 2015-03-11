@@ -37,6 +37,7 @@ data InventoryCommand = Drop | Use | NoCommand
 data GameWindow = GameW
                 | EquipW
                 | InventoryW { index :: Number, command :: InventoryCommand }
+                | SkillW
 
 data GameState = Game { level         :: Level
                       , player        :: Creature
@@ -64,7 +65,7 @@ initialState pname = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
-        , items: replicate 12 testItem1 ++ [testItem2, testItem3]
+        , items: replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
         , playerName: pname
         , points: 0
         , skills: defaultSkills
@@ -88,6 +89,7 @@ initialState pname = Game
         testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0} }
         testItem3 = { itemType: Weapon { weaponType: Axe, material: Steel, prefix: [Rusty] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0} }
+        testItem4 = { itemType: Loot { value: 3 }, pos: {x: 5, y: 3}, vel: {x: 0, y: 0} }
 
 -- Generates random number.
 generate :: GameState -> { n :: Number, game :: GameState }
@@ -182,6 +184,13 @@ onUpdate console _ g = drawGame console g
 
 -- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
+drawGame console g@(Game state@{ window = SkillW }) = do
+    clear console
+    drawString console ("Name: " ++ state.playerName ++ " Points: " ++ show state.points) "AAAAAA" 2 2
+    drawString console (skillsInfo state.skills) "AAAAAA" 2 6
+    drawString console (statsToString state.player.stats) "AAAAAA" 3 4
+    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
+    return g
 drawGame console g@(Game state@{ window = EquipW }) = do
     clear console
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
@@ -215,9 +224,9 @@ drawGame console g@(Game state) = do
     mapM_ (drawItem offset) state.items
     mapM_ (drawCreature offset) state.npcs
     drawCreature offset state.player
-    drawString console ("HP: " ++ (show (state.player.stats.hp))) "FF0000" 2 24
-    drawString console ("Points: " ++ (show (state.points))) "FF0000" 10 24
-    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 25 24
+    drawString console ("HP: " ++ show (state.player.stats.hp) ++ "/" ++ show (state.player.stats.maxHp)) "FF0000" 2 24
+    drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
+    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 30 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
     where
@@ -660,17 +669,14 @@ numbers = M.fromList [48 // 0, 49 // 1, 50 // 2, 51 // 3, 52  // 4, 53  // 5, 54
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
-        Just item -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = addItem state.inventory item }
+        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found " ++ show points ++ " $!") $ Game state { items = deleteItem state.items point, points = state.points + points }
+        Just item -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
         Nothing   -> Game state
     where
         deleteItem :: [Item] -> Point -> [Item]
         deleteItem (x:xs) delPos | x.pos .==. delPos = xs
         deleteItem (x:xs) delPos | otherwise = x : deleteItem xs delPos
         deleteItem [] _ = []
-
-        addItem :: [Item] -> Item -> [Item]
-        addItem xs { itemType = Loot { value = num } } = xs
-        addItem xs x = x:xs
 
 -- Player tries to drop item while in inventory.
 dropItem :: Number -> GameState -> GameState
@@ -698,7 +704,6 @@ onKeyPress console g@(Game state@{ window = InventoryW iw@{ command = Drop } }) 
         Just number -> drawGame console $ dropItem number (Game state { window = InventoryW iw { command = NoCommand } })
         Nothing     -> return g
 
-
 -- Change game states window with i and e (GameW, EquipW and InventoryW)
 onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 73  = drawGame console $ Game state { window = GameW }
 onKeyPress console (Game state@{ window = GameW })        key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
@@ -706,6 +711,10 @@ onKeyPress console (Game state@{ window = EquipW })       key  | key == 69  = dr
 onKeyPress console (Game state@{ window = GameW })        key  | key == 69  = drawGame console $ Game state { window = EquipW }
 onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
 onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 69  = drawGame console $ Game state { window = EquipW }
+
+-- Open skill window with s (and close it with s)
+onKeyPress console (Game state@{ window = GameW })  key | key == makeCharCode "A" = drawGame console $ Game state { window = SkillW }
+onKeyPress console (Game state@{ window = SkillW }) key | key == makeCharCode "A" = drawGame console $ Game state { window = GameW }
 
 -- Change movement mode
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" && move == RunMode = drawGame console $ Game state { move = NormalMode }
