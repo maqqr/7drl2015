@@ -96,10 +96,10 @@ initialState pname = Game
 data EquipmentSlot = WeaponSlot | ShieldSlot | ArmorSlot | RingSlot
 
 instance showEquipmentSlot :: Show EquipmentSlot where
-    show WeaponSlot = "weapon hand"
-    show ShieldSlot = "shield hand"
-    show ArmorSlot  = "body"
-    show RingSlot   = "finger"
+    show WeaponSlot = "in weapon hand"
+    show ShieldSlot = "in shield hand"
+    show ArmorSlot  = "on body"
+    show RingSlot   = "in finger"
 
 instance eqEquipmentSlot :: Eq EquipmentSlot where
     (==) a b = show a == show b
@@ -112,14 +112,15 @@ allEquipmentSlots :: [EquipmentSlot]
 allEquipmentSlots = [WeaponSlot, ShieldSlot, ArmorSlot, RingSlot]
 
 equipmentsToString :: M.Map EquipmentSlot Item -> String
-equipmentsToString m = slotsToStirng allEquipmentSlots m
+equipmentsToString m = slotsToStirng 0 allEquipmentSlots m
     where
-        slotsToStirng :: [EquipmentSlot] -> M.Map EquipmentSlot Item -> String
-        slotsToStirng [] m = ""
-        slotsToStirng (x:xs) m = 
+        slotsToStirng :: Number -> [EquipmentSlot] -> M.Map EquipmentSlot Item -> String
+        slotsToStirng _ [] _ = ""
+        slotsToStirng 9 _  _ = "" -- More than 10 (0 to 9) equipment slots are not allowed, would cause problems with equipping and unequipping. 
+        slotsToStirng i (x:xs) m = 
             case M.lookup x m of
-                Just item -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ showItem item ++ "\n\n" ++ slotsToStirng xs m
-                Nothing   -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ " Nothing\n\n" ++ slotsToStirng xs m
+                Just item -> fill ("(" ++ show i ++ "): Item equipped " ++ show x ++ ": ") 35 ++ showItem item ++ "\n\n" ++ slotsToStirng (i + 1) xs m
+                Nothing   -> fill ("(" ++ show i ++ "): Item equipped " ++ show x ++ ": ") 35 ++ " Nothing\n\n" ++ slotsToStirng (i + 1) xs m
 
 isValidEquip :: ItemType -> EquipmentSlot -> Boolean
 isValidEquip (Weapon w) WeaponSlot = true

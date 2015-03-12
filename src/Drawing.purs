@@ -47,12 +47,13 @@ drawGame console g@(Game state@{ window = EquipW }) = do
     drawString console (equipmentsToString state.equipments) "AAAAAA" 3 6
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
-
-drawGame console g@(Game state@{ window = InventoryW { index = page , command = com }, inventory = inv }) = do
+drawGame console g@(Game state@{ window = InventoryW { index = page , command = com, equip = equ }, inventory = inv }) = do
     clear console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
     drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
     drawInventoryPage inv 0 (page * 10) 4 5
+    drawCommandLine com
+    drawChoseEquipment equ
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
         where
@@ -62,11 +63,20 @@ drawGame console g@(Game state@{ window = InventoryW { index = page , command = 
 
             drawInventoryPage :: [Item] -> Number -> Number -> Number -> Number -> ConsoleEff Unit
             drawInventoryPage [] num i x y = drawString console "--- Empty ---" "AAAAAA" x y --End recursion when list is empty.
-            drawInventoryPage _ 10 _ x y        = drawString console "-------------" "AAAAAA" x y --End recursion when full page (10 items) has been drawn.
+            drawInventoryPage _ 10 _ x y        = return unit
             drawInventoryPage items num i x y  = do
                 drawItemInfo ((!!) items i) (x + 5) y
                 drawString console ("(" ++ show num ++ "): ") "AAAAAA" x y
                 drawInventoryPage items (num + 1) (i + 1) x (y + 1)
+
+            drawCommandLine :: InventoryCommand -> ConsoleEff Unit
+            drawCommandLine Drop = drawString console "Which item do you want to drop?" "AAAAAA" 1 19
+            drawCommandLine Use  = drawString console "Which item do you want to drop?" "AAAAAA" 1 19
+            drawCommandLine _    = return unit
+
+            drawChoseEquipment :: Maybe EquipmentSlot -> ConsoleEff Unit
+            drawChoseEquipment (Just slot) = drawString console ("Which item do you want to equip " ++ show slot ++ "?") "AAAAAA" 1 19
+            drawChoseEquipment Nothing = return unit
 drawGame console g@(Game state) = do
     clear console
     let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
