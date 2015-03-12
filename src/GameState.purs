@@ -55,6 +55,7 @@ data GameState = Game { level         :: Level
                       , blinkTimer    :: Number
                       , blink         :: Boolean -- Blinking indicators are drawn when true.
                       , move          :: MovementMode
+                      , lvlnum        :: Number -- Number of levels played
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -80,6 +81,7 @@ initialState pname = Game
         , blinkTimer: 0
         , blink: false
         , move: NormalMode
+        , lvlnum: 0
         }
     where
         lvl = stringToLevel castleLevel

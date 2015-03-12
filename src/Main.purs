@@ -395,6 +395,38 @@ equip i g@(Game state@{ equipments = eq, window = InventoryW { equip = (Just slo
         Nothing -> addMsg "There is no item in there." g
 equip _ g = g
 
+--choice :: forall a. [a] -> GameState -> { i :: a, game :: GameState }
+
+weaponMaterialList :: Number -> [Material]
+weaponMaterialList lvlnum | lvlnum <= 1 = [Wood, Copper, Iron]
+weaponMaterialList lvlnum | lvlnum <= 2 = [Copper, Iron, Steel]
+weaponMaterialList lvlnum | lvlnum <= 3 = [Iron, Steel, Titanium]
+weaponMaterialList lvlnum | lvlnum <= 4 = [Steel, Titanium]
+weaponMaterialList lvlnum | otherwise   = [Steel, Titanium, Adamantine]
+
+armorMaterialList :: Number -> [Material]
+armorMaterialList lvlnum | lvlnum <= 1 = [Leather, Copper, Iron]
+armorMaterialList lvlnum | lvlnum <= 2 = [Copper, Iron, Steel]
+armorMaterialList lvlnum | lvlnum <= 3 = [Iron, Steel, Titanium]
+armorMaterialList lvlnum | lvlnum <= 4 = [Steel, Titanium]
+armorMaterialList lvlnum | otherwise   = [Steel, Titanium, Adamantine]
+
+randomWeaponMaterial :: GameState -> { i :: Material, game :: GameState }
+randomWeaponMaterial g@(Game state) = unsafeChoice (weaponMaterialList state.lvlnum) g
+
+randomArmorMaterial :: GameState -> { i :: Material, game :: GameState }
+randomArmorMaterial g@(Game state) = unsafeChoice (weaponMaterialList state.lvlnum) g
+
+randomWeaponPrefix :: GameState -> { i :: WeaponPrefix, game :: GameState }
+randomWeaponPrefix = unsafeChoice [Broken, Rusty, Dull, Sharp, Lethal, Masterwork, Light, Balanced, Heavy, Godly]
+
+randomArmorPrefix :: GameState -> { i :: ArmorPrefix, game :: GameState }
+randomArmorPrefix = unsafeChoice [BrokenA, RustyA, MasterworkA, LightA, HeavyA, GodlyA]
+
+
+randomLoot :: Point -> GameState -> { item :: Item, game :: GameState }
+randomLoot p g = let r = randInt 10 100 g in { item: { itemType: Loot { value: r.n }, pos: p, vel: zerop }, game: r.game }
+
 --generateItem :: GameState -> { item :: Item, game ::  GameState }
 --generateItems g = { item: }
 

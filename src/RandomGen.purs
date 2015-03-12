@@ -28,6 +28,7 @@ randomPoint g@(Game { level = (Level level) }) =
         y = randInt 0 level.height x.game
     in { p: {x: x.n, y: y.n}, game: y.game }
 
-choice :: forall a. [a] -> GameState -> { i :: a, game :: GameState }
-choice list g = let r = randInt 0 (length list) g
+-- Unsafe function! List cannot be empty.
+unsafeChoice :: forall a. [a] -> GameState -> { i :: a, game :: GameState }
+unsafeChoice list g = let r = randInt 0 (length list) g
                 in { i: unsafeIndex list r.n, game: r.game }
