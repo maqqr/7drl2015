@@ -385,8 +385,8 @@ equip i g@(Game state@{ equipments = eq, window = InventoryW { equip = (Just slo
     case (!!) inv i of
         Just item -> case isValidEquip item.itemType slot of
                         true  -> Game state { equipments = M.insert slot item eq , inventory = deleteAt i 1 inv, window = EquipW }
-                        false -> g
-        Nothing -> g
+                        false -> addMsg ("Can't equip that item " ++ show slot) g
+        Nothing -> addMsg "There is no item in there." g
 equip _ g = g
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
@@ -425,17 +425,22 @@ onKeyPress console g@(Game state@{ window = InventoryW iw@{ equip = slot } }) ke
         Just number -> drawGame console $ equip number g
         Nothing     -> return g
 
--- Change game states window with i and e (GameW, EquipW and InventoryW)
-onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 73  = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{ window = GameW })        key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
-onKeyPress console (Game state@{ window = EquipW })       key  | key == 69  = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{ window = GameW })        key  | key == 69  = drawGame console $ Game state { window = EquipW }
-onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
-onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 69  = drawGame console $ Game state { window = EquipW }
+-- Change game states window with s, i and e (GameW, EquipW and InventoryW) TODO: add skillwindow
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == makeCharCode "I" = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = EquipW  })       key | key == makeCharCode "I" = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
+onKeyPress console (Game state@{ window = SkillW })        key | key == makeCharCode "I" = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
+onKeyPress console (Game state@{ window = GameW })         key | key == makeCharCode "I" = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == makeCharCode "E" = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = EquipW })        key | key == makeCharCode "E" = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = SkillW })        key | key == makeCharCode "E" = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = GameW })         key | key == makeCharCode "E" = drawGame console $ Game state { window = EquipW }
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == makeCharCode "A" = drawGame console $ Game state { window = SkillW }
+onKeyPress console (Game state@{ window = EquipW })        key | key == makeCharCode "A" = drawGame console $ Game state { window = SkillW }
+onKeyPress console (Game state@{ window = SkillW })        key | key == makeCharCode "A" = drawGame console $ Game state { window = GameW }
+onKeyPress console (Game state@{ window = GameW })         key | key == makeCharCode "A" = drawGame console $ Game state { window = SkillW }
 
--- Open skill window with s (and close it with s)
-onKeyPress console (Game state@{ window = GameW })  key | key == makeCharCode "A" = drawGame console $ Game state { window = SkillW }
-onKeyPress console (Game state@{ window = SkillW }) key | key == makeCharCode "A" = drawGame console $ Game state { window = GameW }
+-- Esc closes inventory, equipment or skill window and returns the player to the game window
+onKeyPress console (Game state) key | key == 27 = drawGame console $ Game state { window = GameW }
 
 -- Change movement mode
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" && move == RunMode = drawGame console $ Game state { move = NormalMode }
@@ -443,10 +448,10 @@ onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" &&
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move == SneakMode = drawGame console $ Game state { move = NormalMode }
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move /= SneakMode = drawGame console $ Game state { move = SneakMode }
 
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7 = drawGame console $ playerJump g (-1)
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9 = drawGame console $ playerJump g 1
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8 = drawGame console $ playerJump g 0
-onKeyPress console g@(Game state@{ window = GameW }) key | key == 80       = drawGame console $ pickUp (state.player.pos) g
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7               = drawGame console $ playerJump g (-1)
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9               = drawGame console $ playerJump g 1
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8               = drawGame console $ playerJump g 0
+onKeyPress console g@(Game state@{ window = GameW }) key | key == makeCharCode "G"       = drawGame console $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state@{ window = GameW }) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
