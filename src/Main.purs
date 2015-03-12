@@ -80,7 +80,7 @@ initialState pname = Game
         , move: NormalMode
         }
     where
-        lvl = stringToLevel testLevel
+        lvl = stringToLevel castleLevel
 
         pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
@@ -306,6 +306,7 @@ drawGame console g@(Game state) = do
         drawTile d (Just Grass)      = d (fromCode 176) "009900"
         drawTile d (Just Wall)       = d (fromCode 219) "444422"
         drawTile d (Just SWall)      = d (fromCode 219) "444422"
+        drawTile d (Just BrickWall)  = d (fromCode 220) "666666"
         drawTile d (Just DoorLocked) = d "+" "661111"
         drawTile d (Just DoorClosed) = d "+" "666633"
         drawTile d (Just DoorOpen)   = d "|" "666633"

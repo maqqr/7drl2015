@@ -10,8 +10,8 @@ import GameData
 import Utils
 import Astar
 
-data Tile = Air        | Water
-          | Ground     | Grass      | Wall     | SWall
+data Tile = Air        | Water      | BrickWall
+          | Ground     | Grass      | Wall      | SWall
           | DoorLocked | DoorClosed | DoorOpen
           | BgCave     | BgHouse
           | Bush       | Stairs
@@ -27,6 +27,7 @@ isTileSolid :: Tile -> Boolean
 isTileSolid Ground     = true
 isTileSolid Grass      = true
 isTileSolid Wall       = true
+isTileSolid BrickWall  = true
 isTileSolid SWall      = true
 isTileSolid DoorLocked = true
 isTileSolid DoorClosed = true
@@ -36,6 +37,7 @@ isTileTransparent :: Tile -> Boolean
 isTileTransparent Ground     = false
 isTileTransparent Grass      = false
 isTileTransparent Wall       = false
+isTileTransparent BrickWall  = false
 isTileTransparent SWall      = false
 isTileTransparent DoorLocked = false
 isTileTransparent DoorClosed = false
@@ -121,6 +123,7 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile c | c == makeChar "G" = Grass
         charToTile c | c == makeChar "S" = Wall
         charToTile c | c == makeChar "W" = SWall
+        charToTile c | c == makeChar "$" = BrickWall
         charToTile c | c == makeChar "*" = DoorLocked
         charToTile c | c == makeChar "+" = DoorClosed
         charToTile c | c == makeChar "|" = DoorOpen
@@ -185,4 +188,29 @@ testLevel =
     ,"#==############====###...|CCC*CC|.ccccccccccc<cccccccccccBBccccccccccccccccccccc"
     ,"==#############====###GGG####*###cc#####cccGGGGGGGccccccGGGccccccccccccccccccccc"
     ,"==============================####################GGGGGG######cccccccccccccccccc"
+    ,"################################################################################"]
+
+castleLevel :: [String]
+castleLevel =
+    ["...............................................................................$"
+    ,"...............................................................................$"
+    ,"...............................................................................$"
+    ,"..........................................................................$...<$"
+    ,"..........................................................................$$$$*$"
+    ,"...........................................................................$CC<$"
+    ,"......................$...<.$..............................................$CC<$"
+    ,"......................$$$$+$$..............................................$$$+$"
+    ,".......................$CC<$.....................$$$$$$$$$$$$$$$...........$CC<$"
+    ,".......................$CC<$.....................$CCCCCCC$CCCCC$...........$CC<$"
+    ,".......................$CC<*.....<...............*CC<CCCC+CCCCC*...........*CC<$"
+    ,".......................$$$+$$$$$$*$$$$$$$$$$$$$$$$$$+$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+    ,"...................%...$CC<$CCCCC<CCCC$CCCCCCCCCC$CC<CCCC$CCCCCCCCCC$CCCCCC$CCC$"
+    ,"..................%%%%.$CC<$CCCCC<CCCC+CCCCCCCCCC+CC<CCCC$CCCCCCCCCC$CCCCCC*CCC$"
+    ,"..................%I%..$$$+$$$$$$$$$$$$$$$$$$$$$$$$$+$$$$$CCCCCCCCCC$$$$$$$$$$C$"
+    ,"#..................I...$CC<$CCCCCCC$CCCCCC$CCCCCCCCC<CCCC$CCCCICICCC$CCCCCCCCC$$"
+    ,"##G.B.......B......I...*CC<+CCCCCCC+CCCCCC*CCCCCCCCC<CCCC*CCCC$=$CCC*CCCCCCCC$$$"
+    ,"###GG====GGGGGGGGGGGGGG$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$=$$$$$$$$$$$$$$$$"
+    ,"######=======##################=======############ccccccc######=################"
+    ,"#######================########=#####=#####=========#c#cc######=################"
+    ,"#########====#########==========#####=======#########c##========################"
     ,"################################################################################"]
