@@ -134,7 +134,7 @@ useSkill skillType odds expr g@(Game state) = { success: success, game: addExp g
         addExp g@(Game state) | otherwise = g -- No experience gained
 
         expRequired :: Number -> Number
-        expRequired lvl = 100 + 20 * lvl
+        expRequired lvl = 100 + 50 * lvl
 
         addLevelUpMsg :: Boolean -> Number -> GameState -> GameState
         addLevelUpMsg true newlvl = addMsg $ "Your " ++ show skillType ++ " skill increased to " ++ show newlvl ++ "."
@@ -151,7 +151,7 @@ useSkill skillType odds expr g@(Game state) = { success: success, game: addExp g
 addMsg :: String -> GameState -> GameState
 addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
     Game state { messageBuf = msg : Data.Array.take (messageBufSize - 1) state.messageBuf }
-addMsg msg (Game state) | otherwise =Game state { messageBuf = state.messageBuf ++ [msg] }
+addMsg msg (Game state) | otherwise =Game state { messageBuf = msg : state.messageBuf }
 
 -- Draws the message buffer.
 drawMessages :: Console -> Point -> Number -> [String] -> ConsoleEff Unit
@@ -384,8 +384,9 @@ updateCreatures advance g@(Game state') =
         -- Creature at index i does a single action.
         updateCreatureOnce :: Number -> GameState -> GameState
         updateCreatureOnce i g@(Game state) =
-            let newAlertAI   = updateAlertness (get i g NoAI (\c -> c.ai))
-                changedAlert = modifyCreatureAt i g (\c ->c { ai = newAlertAI })
+            let spotRoll     = randInt 0 99 g
+                newAlertAI   = updateAlertness spotRoll.n (get i g NoAI (\c -> c.ai))
+                changedAlert = modifyCreatureAt i spotRoll.game (\c ->c { ai = newAlertAI })
             in updateAI changedAlert newAlertAI -- add updatePhysics?
             where
                 -- Creature position
@@ -401,19 +402,22 @@ updateCreatures advance g@(Game state') =
                 canSeePlayer :: Boolean
                 canSeePlayer = lookingAtPlayer && (distanceSq cpos state.player.pos < 10 * 10) && (lineOfSight state.level cpos state.player.pos)
 
-                updateAlertness :: AI -> AI
-                updateAlertness (AI NoAlert st)  | canSeePlayer = AI MightSee st
-                updateAlertness (AI NoAlert st)  | otherwise    = AI NoAlert st
-                updateAlertness (AI MightSee st) | canSeePlayer = AI (Suspicious 1) st
-                updateAlertness (AI MightSee st) | otherwise    = AI NoAlert st
-                updateAlertness (AI (Suspicious n) st) | n == 0                = AI NoAlert st
-                updateAlertness (AI (Suspicious n) st) | not canSeePlayer      = AI (Suspicious (n - 1)) st
-                updateAlertness (AI (Suspicious n) st) | canSeePlayer && n < 4 = AI (Suspicious (n + 1)) st
-                updateAlertness (AI (Suspicious n) st) | otherwise             = AI (Alert 10) st
-                updateAlertness (AI (Alert n) st) | canSeePlayer = AI (Alert 10) st
-                updateAlertness (AI (Alert n) st) | n == 0       = AI NoAlert st
-                updateAlertness (AI (Alert n) st) | otherwise    = AI (Alert (n - 1)) st
-                updateAlertness x = x
+                canHide :: Number -> Boolean
+                canHide roll = roll < (40 * pow 1.2 (fromMaybe 0 $ (\s -> s.level) <$> M.lookup Sneak state.skills))
+
+                updateAlertness :: Number -> AI -> AI
+                updateAlertness roll (AI NoAlert st)  | canSeePlayer = AI MightSee st
+                updateAlertness roll (AI NoAlert st)  | otherwise    = AI NoAlert st
+                updateAlertness roll (AI MightSee st) | canSeePlayer && not (canHide roll) = AI (Suspicious 1) st
+                updateAlertness roll (AI MightSee st) | otherwise                          = AI NoAlert st
+                updateAlertness roll (AI (Suspicious n) st) | n == 0                = AI NoAlert st
+                updateAlertness roll (AI (Suspicious n) st) | not canSeePlayer      = AI (Suspicious (n - 1)) st
+                updateAlertness roll (AI (Suspicious n) st) | canSeePlayer && n < 4 = AI (Suspicious (n + 1)) st
+                updateAlertness roll (AI (Suspicious n) st) | otherwise             = AI (Alert 10) st
+                updateAlertness roll (AI (Alert n) st) | canSeePlayer = AI (Alert 10) st
+                updateAlertness roll (AI (Alert n) st) | n == 0       = AI NoAlert st
+                updateAlertness roll (AI (Alert n) st) | otherwise    = AI (Alert (n - 1)) st
+                updateAlertness _ x = x
 
                 newPatrolPoint :: GameState -> { p :: Point, game :: GameState }
                 newPatrolPoint g' = let points = validPatrolPoints
@@ -615,12 +619,21 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
     in if blockIndex >= 0 then
         updateWorld false (itemStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
         else if canMove then
-            updateWorld false (calcSpeed g) <<< useAthletics $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+            updateWorld false (calcSpeed g) <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
-        useAthletics :: GameState -> GameState
-        useAthletics g@(Game state) | not (delta .==. zerop) = (useSkill Athletics 50 20 g).game
-        useAthletics g@(Game state) | otherwise              = g
+        useMoveSkill :: GameState -> GameState
+        useMoveSkill g@(Game state) | state.move == RunMode && not (delta .==. zerop) = (useSkill Athletics 50 2 g).game
+        useMoveSkill g@(Game state) | state.move == SneakMode && canGetSneakSkill g && not (delta .==. zerop) = (useSkill Sneak 100 5 g).game
+        useMoveSkill g@(Game state) | otherwise = g
+
+        canGetSneakSkill :: GameState -> Boolean
+        canGetSneakSkill (Game state) = any (\c -> lineOfSight state.level c.pos state.player.pos) $ filter (\c -> noAlert c.ai) state.npcs
+
+        noAlert :: AI -> Boolean
+        noAlert (AI NoAlert _)  = true
+        noAlert (AI MightSee _) = true
+        noAlert _               = false
 
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos

@@ -85,7 +85,7 @@ skillsInfo :: Skills -> String
 skillsInfo skills = skillsToString $ M.toList skills
     where
         skillToString :: Tuple SkillType Skill -> String
-        skillToString (Tuple sType { level = l, prog = p }) = fill (show sType ++ " skill. ") 21 ++ fill (" Level: " ++ show l ++ ".") 11 ++ " Progress (0 - " ++ show (100 + l * 20) ++ "): " ++ show p ++"\n"
+        skillToString (Tuple sType { level = l, prog = p }) = fill (show sType ++ " skill. ") 21 ++ fill (" Level: " ++ show l ++ ".") 11 ++ " Progress (0 - " ++ show (100 + l * 50) ++ "): " ++ show p ++"\n"
 
         skillsToString :: [Tuple SkillType Skill] -> String
         skillsToString [] = ""
