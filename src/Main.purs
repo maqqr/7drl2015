@@ -258,6 +258,15 @@ move (Game state) c delta =
         clampPos :: Point -> Point
         clampPos pos = { x: clamp pos.x 0 (w state.level - 1), y: clamp pos.y 0 (h state.level - 1) }
 
+-- Remove dead npcs from game
+removeDead :: GameState -> GameState
+removeDead (Game state@{ npcs = n }) = (Game state { npcs = deadGrind n })
+    where 
+        deadGrind :: [Creature] -> [Creature]
+        deadGrind [] = []
+        deadGrind (x:xs) | x.stats.hp <= 0 = deadGrind xs
+        deadGrind (x:xs) = x : deadGrind xs
+
 -- Updates the game world.
 updateWorld :: Boolean -- Update player also?
             -> Number  -- How many time units the game world advances
@@ -436,7 +445,7 @@ generateItems (x:xs) g = g
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 
 -- If player has 0 hp left, kill the player (no key can save you!)
-onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
+-- onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
 -- In death, press enter to star again
 onKeyPress console (Death d) key | key == 13 = return $ MainMenu
 
