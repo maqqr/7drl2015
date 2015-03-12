@@ -38,13 +38,14 @@ drawGame console g@(Game state@{ window = SkillW }) = do
     drawString console ("Name: " ++ state.playerName ++ " Points: " ++ show state.points) "AAAAAA" 2 2
     drawString console (skillsInfo state.skills) "AAAAAA" 2 6
     drawString console (statsToString state.player.stats) "AAAAAA" 3 4
-    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
+    drawString console "Press ESC or A to close skill window." "AAAAAA" 1 18
     return g
 drawGame console g@(Game state@{ window = EquipW }) = do
     clear console
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
     drawString console "Items equipped: " "AAAAAA" 2 4
     drawString console (equipmentsToString state.equipments) "AAAAAA" 3 6
+    drawString console "Press ESC or E to close equipment window." "AAAAAA" 1 18
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
 drawGame console g@(Game state@{ window = InventoryW { index = page , command = com, equip = equ }, inventory = inv }) = do
@@ -52,6 +53,7 @@ drawGame console g@(Game state@{ window = InventoryW { index = page , command = 
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
     drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
     drawInventoryPage inv 0 (page * 10) 4 5
+    drawString console "Press ESC or I to close inventory window, D to drop item." "AAAAAA" 1 18
     drawCommandLine com
     drawChoseEquipment equ
     drawMessages console {x: 1, y: 23} 255 state.messageBuf

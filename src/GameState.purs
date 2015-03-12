@@ -129,15 +129,11 @@ isValidEquip _ _                   = false
 maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
-speedWithItems c inv = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
+speedWithItems :: Creature -> [Item] -> M.Map EquipmentSlot Item -> Number
+speedWithItems c inv m = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight ( ( carryingWeight (M.values m) + carryingWeight inv ) / maxCarryingCapacity c ))
     where
         deltaWeight :: Number -> Number
-        deltaWeight n | n < 40.0 = 0
-        deltaWeight n | n < 60.0 = 50
-        deltaWeight n | n < 80.0 = 150
-        deltaWeight n | n < 90.0 = 200
-        deltaWeight n | n < 100.0 = 400
-        deltaWeight n | otherwise = 1000
+        deltaWeight x = 0.11 * x * x - 1.01 * x
 
 calcNpcSpeed :: GameState -> Creature -> Number
 calcNpcSpeed (Game state) c | isClimbable state.level c.pos && isValidMove state.level (c.pos .+. {x: 0, y: 1}) = 1500
@@ -158,4 +154,4 @@ moveModeModifier _                           speed = speed
 calcSpeed :: GameState -> Number
 calcSpeed g@(Game state) | isClimbable state.level state.player.pos && isValidMove state.level (state.player.pos .+. {x: 0, y: 1}) = sneakSpeedModifier g 1500
 calcSpeed g@(Game state) | inFreeFall state.level state.player = 500
-calcSpeed g@(Game state) | otherwise = moveModeModifier g $ speedWithItems state.player state.inventory
+calcSpeed g@(Game state) | otherwise = moveModeModifier g $ speedWithItems state.player state.inventory state.equipments
