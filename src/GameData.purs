@@ -124,14 +124,32 @@ type Creature =
     , ai    :: AI
     }
 
+--------- ARMOR STAT ---------
+
+type ArmorStatRecord = { defence :: Number, weight :: Number }
+
+data ArmorStat = ArmorStat ArmorStatRecord
+
+extractStatArmor :: ArmorStat -> ArmorStatRecord
+extractStatArmor (ArmorStat s) = s
+
+instance semigroupArmorStat :: Semigroup ArmorStat where
+    (<>) (ArmorStat a) (ArmorStat b) =
+        ArmorStat { defence: a.defence + b.defence
+                  , weight: a.weight + b.weight
+                  }
+
+instance monoidArmorStat :: Monoid ArmorStat where
+    mempty = ArmorStat { defence: 0, weight: 0 }                 
+
 --------- WEAPON STAT ---------
 
 type WeaponStatRecord = { damage :: Number, weight :: Number, attackSpeed :: Number, attackBonus :: Number }
 
 data WeaponStat = WeaponStat WeaponStatRecord
 
-extractStat :: WeaponStat -> WeaponStatRecord
-extractStat (WeaponStat s) = s
+extractStatWeapon :: WeaponStat -> WeaponStatRecord
+extractStatWeapon (WeaponStat s) = s
 
 instance semigroupWeaponStat :: Semigroup WeaponStat where
     (<>) (WeaponStat a) (WeaponStat b) =
@@ -146,28 +164,65 @@ instance monoidWeaponStat :: Monoid WeaponStat where
 
 --------- MATERIALS ---------
 
-data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine
+data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine | Leather
 
-materialStat :: Material -> WeaponStat
-materialStat Wood = WeaponStat { damage: -2, weight: -1, attackSpeed: 1, attackBonus: 0 }
-materialStat _ = mempty
+materialStatWeapon :: Material -> WeaponStat
+materialStatWeapon Wood       = WeaponStat { damage: -3, weight: -1, attackSpeed:  -50, attackBonus: 4 }
+materialStatWeapon Copper     = WeaponStat { damage: -1, weight:  1, attackSpeed:  100, attackBonus: 0 }
+materialStatWeapon Iron       = WeaponStat { damage:  0, weight:  2, attackSpeed:  100, attackBonus: 0 }
+materialStatWeapon Steel      = WeaponStat { damage:  1, weight:  3, attackSpeed:  100, attackBonus: 0 }
+materialStatWeapon Titanium   = WeaponStat { damage:  2, weight:  4, attackSpeed:    0, attackBonus: 0 }
+materialStatWeapon Adamantine = WeaponStat { damage:  3, weight:  4, attackSpeed: -100, attackBonus: 1 }
+materialStatWeapon _ = mempty
 
---------- WEAPON PREFIXES ---------
+materialStatArmor :: Material -> ArmorStat
+materialStatArmor Leather    = ArmorStat { defence: -2, weight: -2 }
+materialStatArmor Copper     = ArmorStat { defence: -1, weight: -1 }
+materialStatArmor Iron       = ArmorStat { defence:  0, weight:  1 }
+materialStatArmor Steel      = ArmorStat { defence:  1, weight:  2 }
+materialStatArmor Titanium   = ArmorStat { defence:  2, weight:  3 }
+materialStatArmor Adamantine = ArmorStat { defence:  3, weight:  4 }
+materialStatArmor _ = mempty
+
+instance showMaterial :: Show Material where
+    show Wood       = "wooden"
+    show Leather    = "leather"
+    show Copper     = "copper"
+    show Iron       = "iron"
+    show Steel      = "steel"
+    show Titanium   = "titanium"
+    show Adamantine = "adamantine"
+
+--------- WEAPON AND ARMOR PREFIXES ---------
 
 data WeaponPrefix = Broken | Rusty | Dull | Sharp | Lethal | Masterwork | Light | Balanced | Heavy | Godly
 
-prefixStat :: WeaponPrefix -> WeaponStat
-prefixStat Broken     = WeaponStat { damage: -3, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Rusty      = WeaponStat { damage: -2, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Dull       = WeaponStat { damage: -1, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Sharp      = WeaponStat { damage:  1, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Lethal     = WeaponStat { damage:  2, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Masterwork = WeaponStat { damage:  3, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat Godly      = WeaponStat { damage:  4, weight: 0, attackSpeed: 0, attackBonus: 0 }
-prefixStat _          = mempty
+data ArmorPrefix = BrokenA | RustyA | MasterworkA | LightA | HeavyA | GodlyA
 
-showPrefix :: [WeaponPrefix] -> String
-showPrefix = joinWith " " <<< map show
+prefixStatWeapon :: WeaponPrefix -> WeaponStat
+prefixStatWeapon Broken     = WeaponStat { damage: -3, weight: -1, attackSpeed:   50, attackBonus: -4 }
+prefixStatWeapon Rusty      = WeaponStat { damage: -2, weight:  1, attackSpeed:    0, attackBonus: -2 }
+prefixStatWeapon Dull       = WeaponStat { damage: -1, weight:  0, attackSpeed:    0, attackBonus: -1 }
+prefixStatWeapon Sharp      = WeaponStat { damage:  1, weight:  0, attackSpeed:    0, attackBonus:  1 }
+prefixStatWeapon Lethal     = WeaponStat { damage:  2, weight:  0, attackSpeed:    0, attackBonus:  2 }
+prefixStatWeapon Masterwork = WeaponStat { damage:  3, weight:  0, attackSpeed: -100, attackBonus:  3 }
+prefixStatWeapon Godly      = WeaponStat { damage:  4, weight:  0, attackSpeed: -200, attackBonus:  4 }
+prefixStatWeapon Light      = WeaponStat { damage:  0, weight: -2, attackSpeed: -100, attackBonus:  1 }
+prefixStatWeapon Balanced   = WeaponStat { damage:  1, weight:  0, attackSpeed: -100, attackBonus:  3 }
+prefixStatWeapon Heavy      = WeaponStat { damage:  2, weight:  3, attackSpeed:  100, attackBonus:  0 }
+prefixStatWeapon _          = mempty
+
+prefixStatArmor :: ArmorPrefix -> ArmorStat
+prefixStatArmor BrokenA     = ArmorStat { defence: -3, weight: -3 }
+prefixStatArmor RustyA      = ArmorStat { defence: -2, weight:  1 }
+prefixStatArmor MasterworkA = ArmorStat { defence:  3, weight:  0 }
+prefixStatArmor GodlyA      = ArmorStat { defence:  5, weight:  0 }
+prefixStatArmor LightA      = ArmorStat { defence:  0, weight: -3 }
+prefixStatArmor HeavyA      = ArmorStat { defence:  4, weight:  5 }
+prefixStatArmor _          = mempty
+
+showPrefixWeapon :: [WeaponPrefix] -> String
+showPrefixWeapon = joinWith " " <<< map show
 
 instance showWeaponPrefix :: Show WeaponPrefix where
     show Rusty      = "rusty"
@@ -181,6 +236,17 @@ instance showWeaponPrefix :: Show WeaponPrefix where
     show Heavy      = "heavy"
     show Godly      = "godly"
 
+showPrefixArmor :: [ArmorPrefix] -> String
+showPrefixArmor = joinWith " " <<< map show
+
+instance showArmorPrefix :: Show ArmorPrefix where
+    show RustyA      = "rusty"
+    show BrokenA     = "broken"
+    show MasterworkA = "masterwork"
+    show LightA      = "light"
+    show HeavyA      = "heavy"
+    show GodlyA      = "godly"
+
 --------- WEAPON TYPES ---------
 
 data WeaponType = Sword | Axe | Dagger
@@ -191,19 +257,27 @@ instance showWeaponType :: Show WeaponType where
     show Dagger = "dagger"
 
 weaponTypeStat :: WeaponType -> WeaponStat
-weaponTypeStat Sword  = WeaponStat { damage: 3, weight: 1, attackSpeed: 800,  attackBonus: 1 }
-weaponTypeStat Axe    = WeaponStat { damage: 5, weight: 3, attackSpeed: 1200, attackBonus: 0 }
-weaponTypeStat Dagger = WeaponStat { damage: 1, weight: 1, attackSpeed: 600,  attackBonus: 2 }
+weaponTypeStat Sword  = WeaponStat { damage: 3, weight: 6, attackSpeed: 800,  attackBonus: 1 }
+weaponTypeStat Axe    = WeaponStat { damage: 5, weight: 8, attackSpeed: 1200, attackBonus: 0 }
+weaponTypeStat Dagger = WeaponStat { damage: 2, weight: 4, attackSpeed: 600,  attackBonus: 2 }
 
 --------- ITEM TYPES ---------
 
 data ItemType = Loot   { value :: Number }
               | Weapon { weaponType :: WeaponType, material :: Material, prefix :: [WeaponPrefix] }
+              | Armor  { material :: Material, prefix :: [ArmorPrefix]}
+              | Shield { material :: Material, prefix :: [ArmorPrefix] }
+              | Ring
 
 instance showItemType :: Show ItemType where
     show (Loot   { value = val })                         = show val ++ " $"
-    show (Weapon { weaponType = t, prefix = [] })         = show t
-    show (Weapon { weaponType = t, prefix = prefixList }) = showPrefix prefixList ++ " " ++ show t
+    show (Weapon { weaponType = t, material = mat, prefix = [] })         = show t
+    show (Weapon { weaponType = t, material = mat, prefix = prefixList }) = showPrefixWeapon prefixList ++ " " ++ show mat ++ " " ++ show t
+    show (Armor  { material = mat, prefix = [] })         = show mat ++ " armor"
+    show (Armor  { material = mat, prefix = prefixList }) = showPrefixArmor prefixList ++ " " ++ show mat ++ " armor"
+    show (Armor  { material = mat, prefix = [] })         = show mat ++ " shield"
+    show (Armor  { material = mat, prefix = prefixList }) = showPrefixArmor prefixList ++ " " ++ show mat ++ " shield"
+    show Ring                                             = "One ring to fold them and in Haskell bind them."
 
 
 --------- ITEM ---------
@@ -212,12 +286,24 @@ type Item = { itemType :: ItemType, pos :: Point, vel :: Point }
 
 carryingWeight :: [Item] -> Number
 carryingWeight [] = 0
-carryingWeight (x:xs) = (itemStat x).weight + (carryingWeight xs)
+carryingWeight (x:xs) =
+  case x.itemType of
+    Weapon w -> (weaponStat x).weight + (carryingWeight xs)
+    Armor  w -> (armorStat  x).weight + (carryingWeight xs)
+    Shield w -> (armorStat  x).weight + (carryingWeight xs)
+    _        -> carryingWeight xs
 
-itemStat :: Item -> WeaponStatRecord
-itemStat { itemType = Weapon w } = extractStat (materialStat w.material <> weaponTypeStat w.weaponType <> (monoidSum <<< map prefixStat $ w.prefix))
-itemStat _ = extractStat mempty
+weaponStat :: Item -> WeaponStatRecord
+weaponStat { itemType = Weapon w } = extractStatWeapon (materialStatWeapon w.material <> weaponTypeStat w.weaponType <> (monoidSum <<< map prefixStatWeapon $ w.prefix))
+weaponStat _ = extractStatWeapon mempty
+
+armorStat :: Item -> ArmorStatRecord
+armorStat { itemType = Armor  w } = extractStatArmor (materialStatArmor w.material <> (monoidSum <<< map prefixStatArmor $ w.prefix))
+armorStat { itemType = Shield w } = extractStatArmor (materialStatArmor w.material <> (monoidSum <<< map prefixStatArmor $ w.prefix))
+armorStat _ = extractStatArmor mempty
 
 showItem :: Item -> String
-showItem i@{ itemType = Weapon _ } = let s = itemStat i in show i.itemType ++ ", Dmg: " ++ show (s.damage) ++ ", Weight: " ++ show (s.weight)
+showItem i@{ itemType = Weapon _ } = let s = weaponStat i in show i.itemType ++ ", Dmg: "     ++ show (s.damage)  ++ ", Weight: " ++ show (s.weight)
+showItem i@{ itemType = Armor  _ } = let s = armorStat  i in show i.itemType ++ ", Defence: " ++ show (s.defence) ++ ", Weight: " ++ show (s.weight)
+showItem i@{ itemType = Shield _ } = let s = armorStat  i in show i.itemType ++ ", Defence: " ++ show (s.defence) ++ ", Weight: " ++ show (s.weight)
 showItem i = show i.itemType

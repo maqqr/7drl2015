@@ -242,7 +242,7 @@ npcHit c g = let u = randInt 0 99 g in { hit: u.n < baseHitChance c, game: u.gam
 takeDamage :: Item -> Creature -> Creature -> Creature
 takeDamage weapon attacker defender = defender { stats = defender.stats { hp = defender.stats.hp - damage } }
     where
-        damage = (itemStat weapon).damage + statModf attacker.stats.str
+        damage = (weaponStat weapon).damage + statModf attacker.stats.str
 
 
 -- Moves an object that has position. Checks collisions with solid tiles.
@@ -292,7 +292,7 @@ playerCannotAct level c = inFreeFall level c && not (canGrab level c)
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
     in if blockIndex >= 0 then
-        updateWorld false (itemStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
+        updateWorld false (weaponStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
         else if canMove then
             updateWorld false (calcSpeed g) <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
