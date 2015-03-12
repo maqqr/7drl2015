@@ -220,3 +220,7 @@ drawGame console (CharCreation {playerName = pname}) = do
     --drawString console "n) Wise   (+1 int)" "336600" 47 19
     --drawString console "q) Dumb   (-1 int)" "FF0000" 47 20
     return (CharCreation {playerName: pname})
+drawGame console (Death { playerName = pname, points = p }) = do
+    clear console
+    drawString console (pname ++ " has died.\n\nScore: " ++ show p ++ "\n\n\n\nPress Enter to start again.") "990000" 5 4
+    return (Death { playerName: pname, points: p })
