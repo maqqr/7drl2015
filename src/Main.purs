@@ -354,7 +354,9 @@ pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
         Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found " ++ show points ++ " $!") $ Game state { items = deleteItem state.items point, points = state.points + points }
-        Just item -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
+        Just item -> case ( ( carryingWeight (M.values state.equipments) + carryingWeight state.inventory ) / maxCarryingCapacity state.player ) < 110 of
+                         true  -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
+                         false -> addMsg "You can't carry that much weight!" $ Game state
         Nothing   -> Game state
     where
         deleteItem :: [Item] -> Point -> [Item]
