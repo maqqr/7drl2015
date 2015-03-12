@@ -36,8 +36,41 @@ data InventoryCommand = Drop | Use | NoCommand
 
 data GameWindow = GameW
                 | EquipW
-                | InventoryW { index :: Number, command :: InventoryCommand }
+                | InventoryW { index :: Number, command :: InventoryCommand , equip :: Maybe EquipmentSlot }
                 | SkillW
+
+data EquipmentSlot = WeaponSlot | ShieldSlot | ArmorSlot | RingSlot
+
+instance showEquipmentSlot :: Show EquipmentSlot where
+    show WeaponSlot = "weapon hand"
+    show ShieldSlot = "shield hand"
+    show ArmorSlot  = "body"
+    show RingSlot   = "finger"
+
+instance eqEquipmentSlot :: Eq EquipmentSlot where
+    (==) a b = show a == show b
+    (/=) a b = not (a == b)
+
+instance ordEquipmentSlot :: Ord EquipmentSlot where
+    compare a b = compare (show a) (show b)
+    
+allEquipmentSlots :: [EquipmentSlot]
+allEquipmentSlots = [WeaponSlot, ShieldSlot, ArmorSlot, RingSlot]
+
+equipmentsToString :: M.Map EquipmentSlot Item -> String
+equipmentsToString m = slotsToStirng allEquipmentSlots m
+    where
+        slotsToStirng :: [EquipmentSlot] -> M.Map EquipmentSlot Item -> String
+        slotsToStirng [] m = ""
+        slotsToStirng (x:xs) m = 
+            case M.lookup x m of
+                Just item -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ showItem item ++ "\n\n" ++ slotsToStirng xs m
+                Nothing   -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ " Nothing\n\n" ++ slotsToStirng xs m
+
+isValidEquip :: ItemType -> EquipmentSlot -> Boolean
+isValidEquip (Weapon w) WeaponSlot = true
+isValidEquip _ _                   = false
+
 
 data GameState = Game { level         :: Level
                       , player        :: Creature
@@ -47,6 +80,7 @@ data GameState = Game { level         :: Level
                       , points        :: Number -- Value of stolen loot.
                       , skills        :: Skills
                       , inventory     :: [Item]
+                      , equipments    :: M.Map EquipmentSlot Item
                       , freeFallTimer :: Number
                       , messageBuf    :: [String]
                       , pathfinder    :: Pathfinder
@@ -70,6 +104,7 @@ initialState pname = Game
         , points: 0
         , skills: defaultSkills
         , inventory: []
+        , equipments: M.fromList []
         , freeFallTimer: 0
         , messageBuf: []
         , pathfinder: makePathfinder (levelWeights lvl)
@@ -194,10 +229,11 @@ drawGame console g@(Game state@{ window = SkillW }) = do
 drawGame console g@(Game state@{ window = EquipW }) = do
     clear console
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
-    drawString console "Equipments: " "AAAAAA" 2 4
-    --TODO: equipment system
+    drawString console "Items equipped: " "AAAAAA" 2 4
+    drawString console (equipmentsToString state.equipments) "AAAAAA" 3 6
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
+
 drawGame console g@(Game state@{ window = InventoryW { index = page , command = com }, inventory = inv }) = do
     clear console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
@@ -688,6 +724,8 @@ dropItem itemNumber g@(Game state@{ window = InventoryW wi, inventory = inv, ite
         i = itemNumber + wi.index * 10
 dropItem _ g = g
 
+-- TODO: equip function (used while in inventory and equipment slot is chosen).  Check if valid equip.
+
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 
@@ -697,19 +735,34 @@ onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key 
 onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 189 || key == 109) && iw.index == 0                         = drawGame console $ Game state { window = InventoryW iw { index = (floor ((length inv) / 10)) } }
 onKeyPress console (Game state@{ window = InventoryW iw, inventory = inv }) key | (key == 189 || key == 109)                                          = drawGame console $ Game state { window = InventoryW iw { index = (iw.index - 1) } }
 
+-- Equipping item while in inventory window (when !(inventory.equip == Nothing))
+-- TODO
+
 -- Using command in inventory
-onKeyPress console (Game state@{ window = InventoryW iw })                      key | key == 68           = drawGame console $ addMsg "Which item do you want to drop?" (Game state { window = InventoryW { index: iw.index, command: Drop } })
+onKeyPress console (Game state@{ window = InventoryW iw })                      key | key == 68           = drawGame console $ addMsg "Which item do you want to drop?" (Game state { window = InventoryW { index: iw.index, command: Drop, equip: Nothing } })
 onKeyPress console g@(Game state@{ window = InventoryW iw@{ command = Drop } }) key | elem key numberkeys =
     case M.lookup key numbers of
         Just number -> drawGame console $ dropItem number (Game state { window = InventoryW iw { command = NoCommand } })
         Nothing     -> return g
 
+-- Choosing equipment slot in equipment window
+onKeyPress console g@(Game state@{ window = EquipW }) key | elem key numberkeys =
+    case (!!) allEquipmentSlots number of
+        Just eq  -> drawGame console $ (Game state { window = InventoryW { index: 0, command: NoCommand, equip: Just eq } })
+        Nothing  -> return g
+        where
+            number :: Number
+            number =
+                case M.lookup key numbers of
+                    Just n  -> n
+                    Nothing -> -1
+
 -- Change game states window with i and e (GameW, EquipW and InventoryW)
 onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 73  = drawGame console $ Game state { window = GameW }
-onKeyPress console (Game state@{ window = GameW })        key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
+onKeyPress console (Game state@{ window = GameW })        key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
 onKeyPress console (Game state@{ window = EquipW })       key  | key == 69  = drawGame console $ Game state { window = GameW }
 onKeyPress console (Game state@{ window = GameW })        key  | key == 69  = drawGame console $ Game state { window = EquipW }
-onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand } }
+onKeyPress console (Game state@{ window = EquipW  })      key  | key == 73  = drawGame console $ Game state { window = InventoryW { index: 0, command: NoCommand, equip: Nothing } }
 onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 69  = drawGame console $ Game state { window = EquipW }
 
 -- Open skill window with s (and close it with s)
