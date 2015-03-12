@@ -402,6 +402,12 @@ generateItems :: [Point] -> GameState -> GameState
 generateItems (x:xs) g = g
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
+
+-- If player has 0 hp left, kill the player (no key can save you!)
+onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
+-- In death, press enter to star again
+onKeyPress console (Death d) key | key == 13 = return $ MainMenu
+
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 
 -- Change page in inventory with + and -
@@ -425,7 +431,7 @@ onKeyPress console g@(Game state@{ window = EquipW , equipments = eq , inventory
                     Nothing -> -1
 
 -- Using command in inventory
-onKeyPress console (Game state@{ window = InventoryW iw })                      key | key == 68           = drawGame console $ Game state { window = InventoryW { index: iw.index, command: Drop, equip: Nothing } }
+onKeyPress console (Game state@{ window = InventoryW iw }) key | key == 68        = drawGame console $ Game state { window = InventoryW { index: iw.index, command: Drop, equip: Nothing } }
 onKeyPress console g@(Game state@{ window = InventoryW iw@{ command = Drop, equip = Nothing } }) key | elem key numberkeys =
     case M.lookup key numbers of
         Just number -> drawGame console $ dropItem number (Game state { window = InventoryW iw { command = NoCommand } })

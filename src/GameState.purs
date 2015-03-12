@@ -59,6 +59,7 @@ data GameState = Game { level         :: Level
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
+               | Death { playerName :: String, points :: Number }
 
 initialState :: String -> GameState
 initialState pname = Game
