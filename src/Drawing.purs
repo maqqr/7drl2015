@@ -87,6 +87,7 @@ drawGame console g@(Game state) = do
     drawString console ("HP: " ++ show (state.player.stats.hp) ++ "/" ++ show (state.player.stats.maxHp)) "FF0000" 2 24
     drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
     drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 30 24
+    drawString console (showPoint state.player.pos) "FF0000" 60 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return g
     where

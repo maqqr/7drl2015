@@ -94,7 +94,7 @@ index :: Level -> Number -> Number -> Number
 index (Level level) x y = x + y * level.width
 
 getTile :: Level -> Point -> Maybe Tile
-getTile l@(Level level) p | p.x > 0 && p.y > 0 && p.x < level.width && p.y < level.height =
+getTile l@(Level level) p | p.x >= 0 && p.y > 0 && p.x < level.width && p.y < level.height =
     level.tiles !! index l p.x p.y
 getTile l@(Level level) p | p.y >= level.height = Just Ground
 getTile l@(Level level) p | otherwise = Just Air
