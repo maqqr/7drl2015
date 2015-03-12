@@ -82,6 +82,7 @@ modifyCreatureAt i (Game state) f = Game state { npcs = modifyAt i f state.npcs 
 
 -- Updates all npcs.
 updateCreatures :: Number -> GameState -> GameState
+updateCreatures _       g@(Game state'@{ npcs = [] }) = g
 updateCreatures advance g@(Game state') =
     foldl (\g' i -> updateCreature i (advTime i g')) g (0 .. (length state'.npcs - 1))
     where
@@ -272,7 +273,7 @@ updateWorld :: Boolean -- Update player also?
             -> Number  -- How many time units the game world advances
             -> GameState -> GameState
 updateWorld updatePlayer advance =
-    updateCreatures advance >>> (if updatePlayer then updatePlayerPhysics else id) >>> updateItemPhysics
+    removeDead >>> updateCreatures advance >>> (if updatePlayer then updatePlayerPhysics else id) >>> updateItemPhysics
     where
         updatePlayerPhysics (Game state) | isClimbable state.level state.player.pos =
             Game state
