@@ -2,6 +2,7 @@ module Utils where
 
 import Data.Char
 import Data.Tuple
+import Data.Maybe
 import Data.Monoid
 import Data.Foldable
 import Data.Traversable
@@ -16,6 +17,11 @@ import qualified Data.String as S
 
 monoidSum :: forall a. (Monoid a) => [a] -> a
 monoidSum = foldr (<>) mempty
+
+capitalize :: String -> String
+capitalize s = case S.uncons s of
+    Just s' -> S.toUpper (S.singleton s'.head) ++ s'.tail
+    Nothing -> ""
 
 clamp :: forall a. (Ord a) => a -> a -> a -> a
 clamp x min max | x < min = min
