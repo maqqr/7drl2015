@@ -13,142 +13,16 @@ import Debug.Trace
 import Math
 
 import Graphics.CanvasConsole
+import RandomGen
+import GameState
 import GameData
+import Drawing
 import Utils
 import Level
 import Astar
 import Line
 
 strlen = Data.String.length
-
-data MovementMode = NormalMode | SneakMode | RunMode
-
-instance showMovementMode :: Show MovementMode where
-    show NormalMode = "normal"
-    show SneakMode  = "sneak"
-    show RunMode    = "run"
-
-instance eqMovementMode :: Eq MovementMode where
-    (==) a b = show a == show b
-    (/=) a b = not (a == b)
-
-data InventoryCommand = Drop | Use | NoCommand
-
-data GameWindow = GameW
-                | EquipW
-                | InventoryW { index :: Number, command :: InventoryCommand , equip :: Maybe EquipmentSlot }
-                | SkillW
-
-data EquipmentSlot = WeaponSlot | ShieldSlot | ArmorSlot | RingSlot
-
-instance showEquipmentSlot :: Show EquipmentSlot where
-    show WeaponSlot = "weapon hand"
-    show ShieldSlot = "shield hand"
-    show ArmorSlot  = "body"
-    show RingSlot   = "finger"
-
-instance eqEquipmentSlot :: Eq EquipmentSlot where
-    (==) a b = show a == show b
-    (/=) a b = not (a == b)
-
-instance ordEquipmentSlot :: Ord EquipmentSlot where
-    compare a b = compare (show a) (show b)
-    
-allEquipmentSlots :: [EquipmentSlot]
-allEquipmentSlots = [WeaponSlot, ShieldSlot, ArmorSlot, RingSlot]
-
-equipmentsToString :: M.Map EquipmentSlot Item -> String
-equipmentsToString m = slotsToStirng allEquipmentSlots m
-    where
-        slotsToStirng :: [EquipmentSlot] -> M.Map EquipmentSlot Item -> String
-        slotsToStirng [] m = ""
-        slotsToStirng (x:xs) m = 
-            case M.lookup x m of
-                Just item -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ showItem item ++ "\n\n" ++ slotsToStirng xs m
-                Nothing   -> fill ("Item equipped in " ++ show x ++ ": ") 30 ++ " Nothing\n\n" ++ slotsToStirng xs m
-
-isValidEquip :: ItemType -> EquipmentSlot -> Boolean
-isValidEquip (Weapon w) WeaponSlot = true
-isValidEquip _ _                   = false
-
-
-data GameState = Game { level         :: Level
-                      , player        :: Creature
-                      , npcs          :: [Creature]
-                      , items         :: [Item]
-                      , playerName    :: String
-                      , points        :: Number -- Value of stolen loot.
-                      , skills        :: Skills
-                      , inventory     :: [Item]
-                      , equipments    :: M.Map EquipmentSlot Item
-                      , freeFallTimer :: Number
-                      , messageBuf    :: [String]
-                      , pathfinder    :: Pathfinder
-                      , window        :: GameWindow
-                      , seed          :: Number  -- Seed for random number generator.
-                      , blinkTimer    :: Number
-                      , blink         :: Boolean -- Blinking indicators are drawn when true.
-                      , move          :: MovementMode
-                      }
-               | MainMenu
-               | NameCreation { playerName :: String }
-               | CharCreation { playerName :: String }
-
-initialState :: String -> GameState
-initialState pname = Game
-        { level: lvl
-        , player: pl
-        , npcs: [testGuard]
-        , items: replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
-        , playerName: pname
-        , points: 0
-        , skills: defaultSkills
-        , inventory: []
-        , equipments: M.fromList []
-        , freeFallTimer: 0
-        , messageBuf: []
-        , pathfinder: makePathfinder (levelWeights lvl)
-        , window: GameW
-        , seed: 456977
-        , blinkTimer: 0
-        , blink: false
-        , move: NormalMode
-        }
-    where
-        lvl = stringToLevel castleLevel
-
-        pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
-
-        testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
-
-        testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }
-        testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0} }
-        testItem3 = { itemType: Weapon { weaponType: Axe, material: Steel, prefix: [Rusty] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0} }
-        testItem4 = { itemType: Loot { value: 3 }, pos: {x: 5, y: 3}, vel: {x: 0, y: 0} }
-
--- Generates random number.
-generate :: GameState -> { n :: Number, game :: GameState }
-generate (Game state) =
-    let new = (a * state.seed + c) % m in { n: new, game: Game state { seed = new } }
-    where
-        a = 0x343FD
-        c = 0x269EC
-        m = pow 32 2
-
--- Generates random integer between min' and max'
-randInt :: Number -> Number -> GameState -> { n :: Number, game :: GameState }
-randInt min' max' g = let gg = generate g in  gg { n = min' + (gg.n % (max' - min')) }
-
--- Generates random point.
-randomPoint :: GameState -> { p :: Point, game :: GameState }
-randomPoint g@(Game { level = (Level level) }) =
-    let x = randInt 0 level.width g
-        y = randInt 0 level.height x.game
-    in { p: {x: x.n, y: y.n}, game: y.game }
-
--- Maximum message buffer size.
-messageBufSize :: Number
-messageBufSize = 4
 
 -- Uses skill and gets experience.
 useSkill :: SkillType
@@ -182,32 +56,12 @@ useSkill skillType odds expr g@(Game state) = { success: success, game: addExp g
             skill { prog = skill.prog + expr }
 
 
--- Adds message to the message buffer.
-addMsg :: String -> GameState -> GameState
-addMsg msg (Game state) | length state.messageBuf >= messageBufSize =
-    Game state { messageBuf = msg : Data.Array.take (messageBufSize - 1) state.messageBuf }
-addMsg msg (Game state) | otherwise =Game state { messageBuf = msg : state.messageBuf }
-
--- Draws the message buffer.
-drawMessages :: Console -> Point -> Number -> [String] -> ConsoleEff Unit
-drawMessages console p col (x:xs) = drawString console x (rgb col col col) p.x p.y
-                                 >> drawMessages console {x: p.x, y: p.y - 1} (col - 50) xs
-drawMessages _       _ _   []     = return unit
-
-drawStrings :: Console -> Point -> String -> [String] -> ConsoleEff Unit
-drawStrings console p col (x:xs) = drawString console x col p.x p.y
-                                >> drawStrings console {x: p.x, y: p.y + 1} col xs
-drawStrings _ _  _  []           = return unit
-
 -- Updates blinking timer.
 updateBlinkTimer :: Number -> GameState -> GameState
 updateBlinkTimer dt (Game state) | state.blinkTimer > 0.5 = Game state { blink = not state.blink, blinkTimer = 0 }
 updateBlinkTimer dt (Game state) | otherwise              = Game state { blinkTimer = state.blinkTimer + dt }
 
--- Draws the game when state.blink changes to true or false.
-blinkDraw :: Console -> GameState -> ConsoleEff GameState
-blinkDraw console g@(Game state) | state.blinkTimer == 0 = drawGame console g
-blinkDraw console g@(Game state) | otherwise             = return g
+
 
 -- onUpdate is called as often as possible.
 onUpdate :: Console -> Number -> GameState -> ConsoleEff GameState
@@ -216,180 +70,6 @@ onUpdate console dt g@(Game state) | playerCannotAct state.level state.player &&
 onUpdate console dt g@(Game state) | otherwise =
     blinkDraw console <<< updateBlinkTimer dt $ Game state { freeFallTimer = state.freeFallTimer + dt }
 onUpdate console _ g = drawGame console g
-
--- Draws the game state.
-drawGame :: Console -> GameState -> ConsoleEff GameState
-drawGame console g@(Game state@{ window = SkillW }) = do
-    clear console
-    drawString console ("Name: " ++ state.playerName ++ " Points: " ++ show state.points) "AAAAAA" 2 2
-    drawString console (skillsInfo state.skills) "AAAAAA" 2 6
-    drawString console (statsToString state.player.stats) "AAAAAA" 3 4
-    drawStrings console {x: 1, y: 20} "FFFFFF" state.messageBuf
-    return g
-drawGame console g@(Game state@{ window = EquipW }) = do
-    clear console
-    drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
-    drawString console "Items equipped: " "AAAAAA" 2 4
-    drawString console (equipmentsToString state.equipments) "AAAAAA" 3 6
-    drawMessages console {x: 1, y: 23} 255 state.messageBuf
-    return g
-
-drawGame console g@(Game state@{ window = InventoryW { index = page , command = com }, inventory = inv }) = do
-    clear console
-    drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
-    drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
-    drawInventoryPage inv 0 (page * 10) 4 5
-    drawMessages console {x: 1, y: 23} 255 state.messageBuf
-    return g
-        where
-            drawItemInfo :: Maybe Item -> Number -> Number -> ConsoleEff Unit
-            drawItemInfo (Just i) x y = drawString console (showItem i) "AAAAAA" x y
-            drawItemInfo _ x y        = drawString console "empty"      "AAAAAA" x y
-
-            drawInventoryPage :: [Item] -> Number -> Number -> Number -> Number -> ConsoleEff Unit
-            drawInventoryPage [] num i x y = drawString console "--- Empty ---" "AAAAAA" x y --End recursion when list is empty.
-            drawInventoryPage _ 10 _ x y        = drawString console "-------------" "AAAAAA" x y --End recursion when full page (10 items) has been drawn.
-            drawInventoryPage items num i x y  = do
-                drawItemInfo ((!!) items i) (x + 5) y
-                drawString console ("(" ++ show num ++ "): ") "AAAAAA" x y
-                drawInventoryPage items (num + 1) (i + 1) x (y + 1)
-drawGame console g@(Game state) = do
-    clear console
-    let offset = {x: 40 - state.player.pos.x, y: 10 - state.player.pos.y}
-    mapM_ (tileDrawer offset) viewportPoints
-    mapM_ (drawItem offset) state.items
-    mapM_ (drawCreature offset) state.npcs
-    drawCreature offset state.player
-    drawString console ("HP: " ++ show (state.player.stats.hp) ++ "/" ++ show (state.player.stats.maxHp)) "FF0000" 2 24
-    drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
-    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 30 24
-    drawMessages console {x: 1, y: 23} 255 state.messageBuf
-    return g
-    where
-        viewportPoints :: [Point]
-        viewportPoints = do
-            x' <- 0 .. 79
-            y' <- 0 .. 19
-            return {x: x', y: y'}
-
-        inViewport :: Point -> Boolean
-        inViewport p = p.x >= 0 && p.y >= 0 && p.x < 80 && p.y < 20
-
-        pointsAroundPlayer :: Number -> [Point]
-        pointsAroundPlayer r = do
-            x' <- (state.player.pos.x - r) .. (state.player.pos.x + r)
-            y' <- (state.player.pos.y - r) .. (state.player.pos.y + r)
-            return {x: x', y: y'}
-
-        tileDrawer :: Point -> Point -> ConsoleEff Unit
-        tileDrawer offset p = drawTileWithFov pInWorld (drawChar' p) (getTile state.level pInWorld)
-            where
-                pInWorld = p .-. offset
-
-        drawChar' :: Point -> String -> String -> ConsoleEff Unit
-        drawChar' pos c col = drawChar console c col pos.x pos.y
-
-        drawCreature :: Point -> Creature -> ConsoleEff Unit
-        drawCreature offset c | playerCanSee c.pos && inViewport (c.pos .+. offset) =
-            drawAlertness (c.pos .+. offset .+. {x: 0, y: -1}) c.ai
-            >> drawFacing (c.pos .+. offset) c.dir
-            >> drawCreatureType (drawChar' (c.pos .+. offset)) c.ctype
-        drawCreature offset c | otherwise = return unit
-
-        drawAlertness :: Point -> AI -> ConsoleEff Unit
-        drawAlertness p (AI _        Sleep)    | state.blink = drawChar' p "Z" "FFFFFF"
-        drawAlertness p (AI MightSee _ )       | state.blink = drawChar' p "?" "555555"
-        drawAlertness p (AI (Suspicious _) _ ) | state.blink = drawChar' p "?" "FFFF11"
-        drawAlertness p (AI (Alert _) _ )      | state.blink = drawChar' p "!" "FF0000"
-        drawAlertness p _ = return unit
-
-        drawFacing :: Point -> Point -> ConsoleEff Unit
-        drawFacing p dir | dir.x < 0 && state.blink = drawChar' (p .+. {x: -1, y: 0}) ">" "00FF00"
-        drawFacing p dir | dir.x > 0 && state.blink = drawChar' (p .+. {x:  1, y: 0}) "<" "00FF00"
-        drawFacing p dir | otherwise = return unit
-
-        drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
-        drawCreatureType d Player  = d "@" "FF0000"
-        drawCreatureType d Guard   = d "G" "0000FF"
-        drawCreatureType d Archer  = d "A" "00FF00"
-        drawCreatureType d Peasant = d "P" "AAAAFF"
-        drawCreatureType d _       = d "?" "FFFFFF"
-
-        fromCode :: Number -> String
-        fromCode = singleton <<< fromCharCode
-
-        drawItem :: Point -> Item -> ConsoleEff Unit
-        drawItem offset i | playerCanSee i.pos && inViewport (i.pos .+. offset) =
-            drawItemType (drawChar' (i.pos .+. offset)) i.itemType
-        drawItem offset i | otherwise = return unit
-
-        drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
-        drawItemType d (Loot _)   = d "$" "FFAA00"
-        drawItemType d (Weapon _) = d "/" "AAAAAA"
-
-        drawTileWithFov :: forall a. Point -> (String -> String -> a) -> Maybe Tile -> a
-        drawTileWithFov p d t | playerCanSee p = drawTile d t
-        drawTileWithFov p d t | otherwise      = d (fromCode 178) "111111"
-
-        playerCanSee :: Point -> Boolean
-        -- playerCanSee p = true
-        playerCanSee p | distanceSq state.player.pos p > 12 * 12 = false
-        playerCanSee p | otherwise = lineOfSight state.level state.player.pos p
-
-        drawTile :: forall a. (String -> String -> a) -> Maybe Tile -> a
-        drawTile d (Just Air)        = d (fromCode 176) "002456"
-        drawTile d (Just Ground)     = d (fromCode 176) "AAAAAA"
-        drawTile d (Just Grass)      = d (fromCode 176) "009900"
-        drawTile d (Just Wall)       = d (fromCode 219) "444422"
-        drawTile d (Just SWall)      = d (fromCode 219) "444422"
-        drawTile d (Just BrickWall)  = d (fromCode 220) "666666"
-        drawTile d (Just DoorLocked) = d "+" "661111"
-        drawTile d (Just DoorClosed) = d "+" "666633"
-        drawTile d (Just DoorOpen)   = d "|" "666633"
-        drawTile d (Just BgCave)     = d (fromCode 176) "484848"
-        drawTile d (Just BgHouse)    = d (fromCode 219) "222205"
-        drawTile d (Just Bush)       = d (fromCode 172) "009900"
-        drawTile d (Just Water)      = d (fromCode 247) "0000FF"
-        drawTile d (Just Stairs)     = d "<" "FFFFFF"
-        drawTile d (Just Trunk)      = d "I" "666633"
-        drawTile d (Just Leaves)     = d (fromCode 5) "005500"
-        drawTile d _                 = d "?" "FFFFFF"
-
-drawGame console MainMenu = do
-    clear console
-    drawString console "RobberyRL" "FFFFFF" 12 5
-    drawString console "Press enter to start your adventure" "AAAAAA" 6 12
-    return MainMenu
-drawGame console (NameCreation {playerName = pname}) = do
-    clear console
-    drawString console "What is your name? (max 15 characters):" "FF0000" 4 4
-    drawString console pname "FF0000" 6 6
-    drawString console "Press enter to continue" "FF0000" 4 8
-    return (NameCreation {playerName: pname})
-drawGame console (CharCreation {playerName = pname}) = do
-    clear console
-    drawString console ("Character Creation:   " ++ pname) "FF0000" 2 2
-
-    drawString console "Press a to enter game" "FF0000" 2 20
-
-    drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
-    drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
-    drawString console "c) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 6
-    drawString console "d) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 7
-    drawString console "e) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 8
-    drawString console "f) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 9
-    drawString console "g) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
-    drawString console "h) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
-    drawString console "i) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
-
-    --drawString console "Prefix:" "FF0000" 46 13
-    --drawString console "j) Strong (+1 str)" "336600" 47 15
-    --drawString console "k) Weak   (-1 str)" "FF0000" 47 16
-    --drawString console "l) Agile  (+1 dex)" "336600" 47 17
-    --drawString console "m) Clumsy (-1 dex)" "FF0000" 47 18
-    --drawString console "n) Wise   (+1 int)" "336600" 47 19
-    --drawString console "q) Dumb   (-1 int)" "FF0000" 47 20
-    return (CharCreation {playerName: pname})
 
 
 -- Gets creature information from creature at index i.
@@ -561,7 +241,7 @@ takeDamage weapon attacker defender = defender { stats = defender.stats { hp = d
         damage = (itemStat weapon).damage + statModf attacker.stats.str
 
 
--- Moves an object with position. Checks collisions with solid tiles.
+-- Moves an object that has position. Checks collisions with solid tiles.
 move :: forall r. GameState -> { pos :: Point | r } -> Point -> { pos :: Point | r }
 move (Game state) c delta =
     if blocked then c else c { pos = newpos }
@@ -593,9 +273,6 @@ setTile' :: Point -> Tile -> GameState -> GameState
 setTile' p t (Game state) = let newlevel = setTile state.level p t
                             in Game state { level = newlevel, pathfinder = makePathfinder (levelWeights newlevel) }
 
-inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
-inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
-
 canGrab :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 canGrab level c = climb || (isFree {x:0, y: 1} && (ledge (-1) || ledge 1))
     where
@@ -607,49 +284,6 @@ canGrab level c = climb || (isFree {x:0, y: 1} && (ledge (-1) || ledge 1))
 playerCannotAct :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 playerCannotAct level c = inFreeFall level c && not (canGrab level c)
 
-isValidMove :: Level -> Point -> Boolean
-isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
-
-isClimbable :: Level -> Point -> Boolean
-isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
-
-carryingWeight :: [Item] -> Number
-carryingWeight [] = 0
-carryingWeight (x:xs) = (itemStat x).weight + (carryingWeight xs)
-
-maxCarryingCapacity :: Creature -> Number
-maxCarryingCapacity c = c.stats.str * 5 + 10
-
-speedWithItems c inv = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight (carryingWeight inv / maxCarryingCapacity c))
-    where
-        deltaWeight :: Number -> Number
-        deltaWeight n | n < 40.0 = 0
-        deltaWeight n | n < 60.0 = 50
-        deltaWeight n | n < 80.0 = 150
-        deltaWeight n | n < 90.0 = 200
-        deltaWeight n | n < 100.0 = 400
-        deltaWeight n | otherwise = 1000
-
-calcNpcSpeed :: GameState -> Creature -> Number
-calcNpcSpeed (Game state) c | isClimbable state.level c.pos && isValidMove state.level (c.pos .+. {x: 0, y: 1}) = 1500
-calcNpcSpeed (Game state) c | inFreeFall state.level c = 500
-calcNpcSpeed (Game state) c | otherwise = 1000
-
--- Movement speed modifier when only sneak affects it.
-sneakSpeedModifier :: GameState -> Number -> Number
-sneakSpeedModifier (Game { move = SneakMode }) speed = floor (speed * 2)
-sneakSpeedModifier _                           speed = speed
-
--- Movement speed modifier.
-moveModeModifier g@(Game { move = SneakMode }) speed = sneakSpeedModifier g speed
-moveModeModifier (Game { move = RunMode })   speed = floor (speed / 1.5)
-moveModeModifier _                           speed = speed
-
--- Calculates speed value for player.
-calcSpeed :: GameState -> Number
-calcSpeed g@(Game state) | isClimbable state.level state.player.pos && isValidMove state.level (state.player.pos .+. {x: 0, y: 1}) = sneakSpeedModifier g 1500
-calcSpeed g@(Game state) | inFreeFall state.level state.player = 500
-calcSpeed g@(Game state) | otherwise = moveModeModifier g $ speedWithItems state.player state.inventory
 
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0

@@ -210,6 +210,10 @@ instance showItemType :: Show ItemType where
 
 type Item = { itemType :: ItemType, pos :: Point, vel :: Point }
 
+carryingWeight :: [Item] -> Number
+carryingWeight [] = 0
+carryingWeight (x:xs) = (itemStat x).weight + (carryingWeight xs)
+
 itemStat :: Item -> WeaponStatRecord
 itemStat { itemType = Weapon w } = extractStat (materialStat w.material <> weaponTypeStat w.weaponType <> (monoidSum <<< map prefixStat $ w.prefix))
 itemStat _ = extractStat mempty

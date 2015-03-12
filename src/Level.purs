@@ -103,6 +103,15 @@ setTile :: Level -> Point -> Tile -> Level
 setTile l@(Level level) p newTile =
     Level $ level { tiles = updateAt (index l p.x p.y) newTile level.tiles }
 
+isValidMove :: Level -> Point -> Boolean
+isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
+
+isClimbable :: Level -> Point -> Boolean
+isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
+
+inFreeFall :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
+inFreeFall level c = isValidMove level (c.pos .+. {x:0, y: 1}) || c.vel.y < 0
+
 -- Returns all points inside level.
 levelPoints :: Level -> [Point]
 levelPoints (Level level) = do
