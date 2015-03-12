@@ -106,6 +106,9 @@ setTile l@(Level level) p newTile =
 isValidMove :: Level -> Point -> Boolean
 isValidMove level = not <<< isTileSolid <<< fromMaybe Air <<< getTile level
 
+isTransparent :: Level -> Point -> Boolean
+isTransparent level = isTileTransparent <<< fromMaybe Air <<< getTile level
+
 isClimbable :: Level -> Point -> Boolean
 isClimbable level = isTileClimbable <<< fromMaybe Air <<< getTile level
 
