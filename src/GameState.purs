@@ -85,7 +85,7 @@ initialState pname = Game
 
         pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
-        testGuard = { pos: {x: 10, y: 20}, dir:zerop, ctype: Guard, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
+        testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
 
         testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }
         testItem2 = { itemType: Loot { value: 3 }, pos: {x: 20, y: 3}, vel: {x: 0, y: 0} }
@@ -130,7 +130,7 @@ maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
 speedWithItems :: Creature -> [Item] -> M.Map EquipmentSlot Item -> Number
-speedWithItems c inv m = 1000 - (c.stats.dex - 10) * 25 + (deltaWeight ( ( carryingWeight (M.values m) + carryingWeight inv ) / maxCarryingCapacity c ))
+speedWithItems c inv m = floor $ 1000 - (c.stats.dex - 10) * 25 + (deltaWeight ( ( carryingWeight (M.values m) + carryingWeight inv ) / maxCarryingCapacity c ))
     where
         deltaWeight :: Number -> Number
         deltaWeight x = 0.11 * x * x - 1.01 * x

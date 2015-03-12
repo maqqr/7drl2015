@@ -147,6 +147,7 @@ updateCreatures advance g@(Game state') =
                         canWalkOn p = isValidMove state.level p && not (isValidMove state.level (p .+. {x: 0, y: 1}))
 
                 updateAI :: GameState -> AI -> GameState
+                updateAI g (AI (Alert _) _) | get i g Peasant (\c -> c.ctype) == Archer && canSeePlayer = get i g g (flip npcAttack g)
                 updateAI g (AI (Alert _) _)      = mover g $ moveToPlayer
                 updateAI g (AI (Suspicious _) _) = mover g $ moveToPlayer
                 updateAI g (AI _ (Idle p))       = mover g $ moveToPoint p
@@ -217,13 +218,16 @@ playerWeapon _ = { itemType: Weapon { weaponType: Axe, material: Iron, prefix: [
 
 playerAttack :: Number -> GameState -> GameState
 playerAttack i g@(Game state) = let attack = playerHit g
-                                in if attack.hit then addMsg ("You hit " ++ (get i g "" (\c -> show c.ctype)) ++ "!") $ modifyCreatureAt i attack.game (takeDamage (playerWeapon g) state.player)
-                                   else addMsg ("You missed " ++ get i g "" (\c -> show c.ctype) ++ "!") attack.game
+                                in if attack.hit then addMsg ("You hit the " ++ (get i g "" (\c -> show c.ctype)) ++ "!") $ modifyCreatureAt i attack.game (takeDamage (playerWeapon g) state.player)
+                                   else addMsg ("You missed the " ++ get i g "" (\c -> show c.ctype) ++ "!") attack.game
 
 npcAttack :: Creature -> GameState -> GameState
 npcAttack c g = let attack = npcHit c g
                 in if attack.hit then addMsg (show c.ctype ++ " hit you!") <<< (\(Game st) -> Game st { player = takeDamage (npcWeapon c) c st.player }) $ attack.game
-                else addMsg (show c.ctype ++ " tried to attack you, but missed.") attack.game
+                else addMsg (capitalize (show c.ctype) ++ " tried to " ++ attackVerb c.ctype ++ " you, but missed.") attack.game
+    where
+        attackVerb Archer = "shoot"
+        attackVerb _      = "attack"
 
 baseHitChance :: Creature -> Number
 baseHitChance c = 50 + 5 * (statModf c.stats.dex)
