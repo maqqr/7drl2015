@@ -395,6 +395,12 @@ equip i g@(Game state@{ equipments = eq, window = InventoryW { equip = (Just slo
         Nothing -> addMsg "There is no item in there." g
 equip _ g = g
 
+--generateItem :: GameState -> { item :: Item, game ::  GameState }
+--generateItems g = { item: }
+
+generateItems :: [Point] -> GameState -> GameState
+generateItems (x:xs) g = g
+
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 
