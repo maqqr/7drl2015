@@ -35,17 +35,39 @@ blinkDraw :: Console -> GameState -> ConsoleEff GameState
 blinkDraw console g@(Game state) | state.blinkTimer == 0 = drawGame console g
 blinkDraw console g@(Game state) | otherwise             = return g
 
+fromCode :: Number -> String
+fromCode = singleton <<< fromCharCode
+
+drawFrame :: Console -> ConsoleEff Unit
+drawFrame console = do
+    drawString console leftSideFrame  "990000" 0 0
+    drawString console rightSideFrame "990000" 79 0
+    drawString console bar "990000" 1 0
+    drawString console bar "990000" 1 19
+    where
+        rightSideFrame :: String
+        rightSideFrame = fromCode 187 ++ "\n" ++ joinWith "\n" (replicate 18 $ fromCode 186) ++ "\n" ++ fromCode 188
+
+        leftSideFrame :: String
+        leftSideFrame = fromCode 201 ++ "\n" ++ joinWith "\n" (replicate 18 $ fromCode 186) ++ "\n" ++ fromCode 200
+
+        bar :: String
+        bar = foldl (++) "" (replicate 78 $ fromCode 205)
+
+
 -- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game state@{ window = SkillW }) = do
     clear console
     drawString console ("Name: " ++ state.playerName) "AAAAAA" 2 2
+    drawFrame console
     drawString console (skillsInfo state.skills) "AAAAAA" 2 6
     drawString console (statsToString state.player.stats) "AAAAAA" 3 4
     drawString console "Press ESC or A to close skill window." "AAAAAA" 1 18
     return g
 drawGame console g@(Game state@{ window = EquipW }) = do
     clear console
+    drawFrame console
     drawString console "Press e to continue and i to open your inventory." "AAAAAA" 1 1
     drawString console "Items equipped: " "AAAAAA" 2 4
     drawString console (equipmentsToString state.equipments) "AAAAAA" 3 6
@@ -54,6 +76,7 @@ drawGame console g@(Game state@{ window = EquipW }) = do
     return g
 drawGame console g@(Game state@{ window = InventoryW { index = page , command = com, equip = equ }, inventory = inv }) = do
     clear console
+    drawFrame console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
     drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show $ carryingWeight inv) ++ " lbs)") "AAAAAA" 2 4
     drawInventoryPage inv 0 (page * 10) 4 5
