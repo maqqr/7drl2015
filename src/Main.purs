@@ -430,7 +430,7 @@ closeDoor g@(Game state) =
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
-        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found an item worth of " ++ show points ++ " gold coins!") $ Game state { items = deleteItem state.items point, points = state.points + points }
+        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found an item worth of " ++ show points ++ " gold coins!") $ Game state { items = deleteItem state.items point, points = state.points + points, pointsTotal = state.pointsTotal + points }
         Just item -> case ( ( carryingWeight (M.values state.equipments) + carryingWeight state.inventory ) / maxCarryingCapacity state.player ) < 110 of
                          true  -> addMsg ("You picked up " ++ show item.itemType ++ ".") $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
                          false -> addMsg "You can't carry that much weight!" $ Game state
@@ -532,10 +532,22 @@ generateItems (x:xs) f g =
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos, player = setMaxHp (state.player), memory = M.fromList [] }
+setLevel def (Game state) = arrivalMsg <<< setTotalPoints <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $
+                                Game state { items  = []
+                                           , npcs   = map makeNpc def.npcPos
+                                           , player = setMaxHp (state.player)
+                                           , memory = M.fromList []
+                                           , pointsLevel = 0 }
     where
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
+
+        setTotalPoints :: GameState -> GameState
+        setTotalPoints (Game state) = Game state { pointsTotal = sum $ map itemValue state.items }
+
+        itemValue :: Item -> Number
+        itemValue { itemType = Loot loot } = loot.value
+        itemValue _ = 0
 
         setTiles :: GameState -> GameState
         setTiles (Game state) = Game state { level = stringToLevel def.plan }
@@ -635,9 +647,9 @@ onKeyPress console g@(Game state@{ window = GameW }) key =
 onKeyPress console MainMenu key                              | key == 13       = return $ NameCreation { playerName: "" }
 onKeyPress console (NameCreation { playerName = pname }) key | key == 13       = return $ CharCreation { playerName: pname }
 onKeyPress console (NameCreation { playerName = xs })    key | key == 8        = return $ NameCreation { playerName: (take (strlen xs - 1) xs) }
-onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
+onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: singleton (fromCharCode key) }
 onKeyPress console (NameCreation { playerName = xs })    key | strlen xs > 15  = return $ NameCreation { playerName: xs }
-onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
+onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: xs ++ (toLower <<< singleton $ fromCharCode key) }
 
 -- Select class in character creation
 onKeyPress console (CharCreation { playerName = xs }) key =
@@ -688,7 +700,7 @@ onKeyPress console u@(UseSkillPoints { playerName = xs, skillPoints = sp, skills
                 raiseSkills i skills = M.fromList $ raiseSkill i $ M.toList skills
 
 
-onKeyPress _ st _ = return st
+onKeyPress _ g _ = return g
 
 
 main = J.ready $ withConsole 80 25 MainMenu {onKeyPress: onKeyPress, onUpdate: onUpdate}

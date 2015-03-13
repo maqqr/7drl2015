@@ -48,6 +48,8 @@ data GameState = Game { level         :: Level
                       , items         :: [Item]
                       , playerName    :: String
                       , points        :: Number -- Value of stolen loot.
+                      , pointsTotal   :: Number -- Total loot stolen.
+                      , pointsLevel   :: Number -- Value of all loot in level.
                       , skills        :: Skills
                       , inventory     :: [Item]
                       , equipments    :: M.Map EquipmentSlot Item
@@ -77,6 +79,8 @@ initialState pname s pl = Game
         , items: [] -- replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
         , playerName: pname
         , points: 0
+        , pointsTotal: 0
+        , pointsLevel: 0
         , skills: s
         , inventory: []
         , equipments: M.fromList []
