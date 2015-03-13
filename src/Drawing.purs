@@ -155,6 +155,10 @@ drawGame console g@(Game state) = do
         drawItemType :: forall a. (String -> String -> a) -> ItemType -> a
         drawItemType d (Loot _)   = d "$" "FFAA00"
         drawItemType d (Weapon _) = d "/" "AAAAAA"
+        drawItemType d (Armor _)  = d "[" "777777"
+        drawItemType d (Shield _) = d "o" "999999"
+        drawItemType d Ring       = d "," "DDDD00"
+        drawItemType d _ = d "?" "FFFFFF"
 
         drawTileWithFov :: forall a. Point -> (String -> String -> a) -> Maybe Tile -> a
         drawTileWithFov p d t | playerCanSee p = drawTile d t

@@ -485,7 +485,7 @@ generateItems (x:xs) f g = let r = f x g in case r.game of (Game state) -> gener
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = [] }
+setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos }
     where
         setTiles :: GameState -> GameState
         setTiles (Game state) = Game state { level = stringToLevel def.plan }
@@ -501,6 +501,9 @@ setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFind
 
         genLoot :: GameState -> GameState
         genLoot = generateItems def.lootPos randomLoot
+
+        makeNpc :: { p :: Point, ctype :: CreatureType, ai :: AIState } -> Creature
+        makeNpc info = { pos: info.p, dir:zerop, ctype: info.ctype, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert info.ai }
 
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState

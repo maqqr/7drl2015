@@ -152,25 +152,24 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
         charToTile _ = Air
 
 
+type LevelDefinition =
+    { name      :: String
+    , plan      :: [String]
+    , itemPos   :: [Point]
+    , lootPos   :: [Point]
+    , npcPos    :: [{ p :: Point, ctype :: CreatureType, ai :: AIState }]
+    , startPos  :: Point
+    }
+
 allLevels :: [LevelDefinition]
 allLevels = [{ name: "the tutorial village"
              , plan: tutorialLevel
-             , itemPos: []
-             , lootPos: [(p 23 5)]
-             , guardPos: []
-             , archerPos: []
+             , itemPos: [p 55 6, p 62 5, p 23 9]
+             , lootPos: [p 40 9, p 48 9, p 64 9, p 66 9, p 21 9, p 22 9]
+             , npcPos: [{ p: p 25 5, ctype: Guard, ai: Idle (p 25 5)}]
              , startPos: {x: 2, y: 7}}]
     where
         p x y = {x: x, y: y}
-
-type LevelDefinition = { name      :: String
-                       , plan      :: [String]
-                       , itemPos   :: [Point]
-                       , lootPos   :: [Point]
-                       , guardPos  :: [Point]
-                       , archerPos :: [Point]
-                       , startPos  :: Point
-                       }
 
 emptyLevel' :: [String]
 emptyLevel' =
