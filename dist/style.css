@@ -8,6 +8,19 @@ h1 {
     margin-left: 3em;
 }
 
+p {
+    color: gray;
+    margin-left: 6em;
+}
+
+a {
+    color: cornflowerblue;
+}
+
+a:visited {
+    color: cornflowerblue;
+}
+
 canvas {
     display: block;
     margin: 0 auto;
