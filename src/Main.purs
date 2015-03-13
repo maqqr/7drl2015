@@ -426,8 +426,6 @@ equip i g@(Game state@{ equipments = eq, window = InventoryW { equip = (Just slo
         Nothing -> addMsg "There is no item in there." g
 equip _ g = g
 
---choice :: forall a. [a] -> GameState -> { i :: a, game :: GameState }
-
 weaponMaterialList :: Number -> [Material]
 weaponMaterialList lvlnum | lvlnum <= 1 = [Wood, Copper, Iron]
 weaponMaterialList lvlnum | lvlnum <= 2 = [Copper, Iron, Steel]
@@ -478,20 +476,38 @@ randomItem p g = let f = unsafeChoice [randomWeapon, randomArmor, randomShield] 
                      r = f.i f.game
                  in { i: { itemType: r.i, pos: p, vel: zerop }, game: r.game }
 
-randomLoot :: Point -> GameState -> { item :: Item, game :: GameState }
-randomLoot p g = let r = randInt 10 100 g in { item: { itemType: Loot { value: r.n }, pos: p, vel: zerop }, game: r.game }
+randomLoot :: Point -> GameState -> { i :: Item, game :: GameState }
+randomLoot p g = let r = randInt 10 100 g in { i: { itemType: Loot { value: r.n }, pos: p, vel: zerop }, game: r.game }
 
---generateItem :: GameState -> { item :: Item, game ::  GameState }
---generateItems g = { item: }
 
-generateItems :: [Point] -> GameState -> GameState
-generateItems (x:xs) g = g
+generateItems :: [Point] -> (Point -> GameState -> { i :: Item, game :: GameState }) -> GameState -> GameState
+generateItems (x:xs) f g = let r = f x g in case r.game of (Game state) -> generateItems xs f (Game state { items = r.i : state.items })
+generateItems []     _ g = g
+
+setLevel :: LevelDefinition -> GameState -> GameState
+setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = [] }
+    where
+        setTiles :: GameState -> GameState
+        setTiles (Game state) = Game state { level = stringToLevel def.plan }
+
+        calcPathFinding :: GameState -> GameState
+        calcPathFinding (Game state) = Game state { pathfinder = makePathfinder (levelWeights state.level) }
+
+        arrivalMsg :: GameState -> GameState
+        arrivalMsg = addMsg $ "You arrive at the edge of " ++ def.name ++ "."
+
+        genItems :: GameState -> GameState
+        genItems = generateItems def.itemPos randomItem
+
+        genLoot :: GameState -> GameState
+        genLoot = generateItems def.lootPos randomLoot
+
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 
 -- If player has 0 hp left, kill the player (no key can save you!)
 -- onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
--- In death, press enter to star again
+-- In death, press enter to start again
 onKeyPress console (Death d) key | key == 13 = return $ MainMenu
 
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
@@ -600,10 +616,13 @@ onKeyPress console (CharCreation { playerName = xs }) key =
 onKeyPress console u@(UseSkillPoints { playerName = xs, skillPoints = sp, skills = s, player = pl }) key =
      case M.lookup key numbers of
         Just number -> case sp of
-                           1 -> return $ initialState xs (raiseSkills number s) pl
+                           1 -> return <<< setLevel (firstLevel allLevels) $ initialState xs (raiseSkills number s) pl
                            _ -> return $ (UseSkillPoints { playerName: xs, skillPoints: sp - 1, skills: raiseSkills number s, player: pl })
         Nothing     -> return u
             where
+                firstLevel :: [LevelDefinition] -> LevelDefinition
+                firstLevel (x:_) = x
+
                 raiseSkill :: Number -> [Tuple SkillType Skill] -> [Tuple SkillType Skill]
                 raiseSkill i list =
                     case (!!) list i of

@@ -65,10 +65,10 @@ data GameState = Game { level         :: Level
 
 initialState :: String -> Skills -> Creature -> GameState
 initialState pname s pl = Game
-        { level: lvl
+        { level: emptyLevel
         , player: pl
-        , npcs: [testGuard]
-        , items: replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
+        , npcs: [] -- [testGuard]
+        , items: [] -- replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
         , playerName: pname
         , points: 0
         , skills: s
@@ -76,7 +76,7 @@ initialState pname s pl = Game
         , equipments: M.fromList []
         , freeFallTimer: 0
         , messageBuf: []
-        , pathfinder: makePathfinder (levelWeights lvl)
+        , pathfinder: makePathfinder []
         , window: GameW
         , seed: 456977
         , blinkTimer: 0
@@ -85,8 +85,6 @@ initialState pname s pl = Game
         , lvlnum: 0
         }
     where
-        lvl = stringToLevel tutorialLevel
-
         testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
 
         testItem1 = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: {x: 6, y: 4}, vel: {x: 0, y: 0} }

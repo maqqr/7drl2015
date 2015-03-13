@@ -90,6 +90,9 @@ levelWeights l@(Level level) = do
 newLevel :: Number -> Number -> Level
 newLevel w h = Level { width: w, height: h, tiles: replicate (w * h) Air }
 
+emptyLevel :: Level
+emptyLevel = Level { width: 0, height: 0, tiles: [] }
+
 index :: Level -> Number -> Number -> Number
 index (Level level) x y = x + y * level.width
 
@@ -150,17 +153,27 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
 
 
 allLevels :: [LevelDefinition]
-allLevels = []
+allLevels = [{ name: "the tutorial village"
+             , plan: tutorialLevel
+             , itemPos: []
+             , lootPos: [(p 23 5)]
+             , guardPos: []
+             , archerPos: []
+             , startPos: {x: 2, y: 7}}]
+    where
+        p x y = {x: x, y: y}
 
-type LevelDefinition = { name     :: String
-                       , plan     :: [String]
-                       , itemPos  :: [Point]
-                       , lootPos  :: [Point]
-                       , startPos :: Point
+type LevelDefinition = { name      :: String
+                       , plan      :: [String]
+                       , itemPos   :: [Point]
+                       , lootPos   :: [Point]
+                       , guardPos  :: [Point]
+                       , archerPos :: [Point]
+                       , startPos  :: Point
                        }
 
-emptyLevel :: [String]
-emptyLevel =
+emptyLevel' :: [String]
+emptyLevel' =
     ["................................................................................"
     ,"................................................................................"
     ,"................................................................................"

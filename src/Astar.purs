@@ -17,8 +17,14 @@ foreign import makePathfinder
         easystar.setGrid(grid);
         easystar.setAcceptableTiles([1]);
         easystar.enableDiagonals();
-        easystar.w = grid[0].length;
-        easystar.h = grid.length;
+        if (grid.length === 0) {
+            easystar.w = 0;
+            easystar.h = 0;
+        }
+        else {
+            easystar.w = grid[0].length;
+            easystar.h = grid.length;
+        }
         return easystar;
     }
     """ :: [[Number]] -> Pathfinder
