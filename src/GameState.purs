@@ -135,6 +135,9 @@ equipmentsToString m = slotsToStirng 0 allEquipmentSlots m
 
 isValidEquip :: ItemType -> EquipmentSlot -> Boolean
 isValidEquip (Weapon w) WeaponSlot = true
+isValidEquip (Armor  w) ArmorSlot  = true
+isValidEquip (Shield w) ShieldSlot = true
+isValidEquip Ring       RingSlot   = true
 isValidEquip _ _                   = false
 
 maxCarryingCapacity :: Creature -> Number
