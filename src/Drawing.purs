@@ -78,7 +78,7 @@ drawGame console g@(Game state@{ window = InventoryW { index = page , command = 
     clear console
     drawFrame console
     drawString console "Press i to continue and e to open your equipments. Change page with + and -." "AAAAAA" 1 1
-    drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show ( carryingWeight (M.values eq) + carryingWeight inv )) ++ "/" ++ maxCarryingCapacity pl) "AAAAAA" 2 4
+    drawString console ("Inventory (page " ++ show (page + 1) ++ "/" ++ show (floor ((length inv) / 10) + 1) ++ "): (Carrying: " ++ (show ( carryingWeight (M.values eq) + carryingWeight inv )) ++ "/" ++ show (maxCarryingCapacity pl) ++ ")") "AAAAAA" 2 4
     drawInventoryPage inv 0 (page * 10) 4 5
     drawString console "Press ESC or I to close inventory window, D to drop item." "AAAAAA" 1 18
     drawCommandLine com
