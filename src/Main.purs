@@ -684,7 +684,7 @@ onKeyPress console (CharCreation { playerName = xs }) key =
     case M.lookup key numbers of
         -- Just 9  -> return $ CharCreation { playerName: xs } -- uncomment to prevent the usage of developer class
         Just 0  -> return $ CharCreation { playerName: xs }
-        Just i  -> return $ (UseSkillPoints { playerName: xs ++ " " ++ getStartingClassName (i-1), skillPoints: getStartingSP (i-1), skills: defaultSkills, player: getStartingPlayer i })
+        Just i  -> return $ (UseSkillPoints { playerName: xs ++ " " ++ getStartingClassName (i-1), skillPoints: getStartingSP (i-1), skills: defaultSkills, player: getStartingPlayer (i-1) })
         Nothing -> return $ CharCreation { playerName: xs }
              where
                 getStartingPlayer :: Number -> Creature
