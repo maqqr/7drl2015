@@ -430,7 +430,7 @@ closeDoor g@(Game state) =
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
-        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found an item worth of " ++ show points ++ " gold coins!") $ Game state { items = deleteItem state.items point, points = state.points + points }
+        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found an item worth of " ++ show points ++ " gold coins!") $ Game state { items = deleteItem state.items point, points = state.points + points, pointsTotal = state.pointsTotal + points }
         Just item -> case ( ( carryingWeight (M.values state.equipments) + carryingWeight state.inventory ) / maxCarryingCapacity state.player ) < 110 of
                          true  -> addMsg ("You picked up " ++ show item.itemType ++ ".") $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
                          false -> addMsg "You can't carry that much weight!" $ Game state
@@ -532,10 +532,22 @@ generateItems (x:xs) f g =
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos, player = setMaxHp (state.player), memory = M.fromList [] }
+setLevel def (Game state) = arrivalMsg <<< setTotalPoints <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $
+                                Game state { items  = []
+                                           , npcs   = map makeNpc def.npcPos
+                                           , player = setMaxHp (state.player)
+                                           , memory = M.fromList []
+                                           , pointsLevel = 0 }
     where
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
+
+        setTotalPoints :: GameState -> GameState
+        setTotalPoints (Game state) = Game state { pointsTotal = sum $ map itemValue state.items }
+
+        itemValue :: Item -> Number
+        itemValue { itemType = Loot loot } = loot.value
+        itemValue _ = 0
 
         setTiles :: GameState -> GameState
         setTiles (Game state) = Game state { level = stringToLevel def.plan }
