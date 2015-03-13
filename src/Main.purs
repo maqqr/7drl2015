@@ -317,7 +317,7 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
     in if blockIndex >= 0 then
         updateWorld false (weaponStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
         else if canMove then
-            updateWorld false (calcSpeed g) <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+            updateWorld false (calcSpeed g) <<< addItemOnGroundMessage <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
         useMoveSkill :: GameState -> GameState
@@ -332,6 +332,14 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
         noAlert (AI NoAlert _)  = true
         noAlert (AI MightSee _) = true
         noAlert _               = false
+
+        addItemOnGroundMessage :: GameState -> GameState
+        addItemOnGroundMessage | length itemsOnGround == 1 = case head itemsOnGround of Just it -> addMsg $ "You see " ++ show it.itemType ++ " on the ground."
+        addItemOnGroundMessage | length itemsOnGround >  1 = case head itemsOnGround of Just it -> addMsg $ "You see " ++ show it.itemType ++ " and other items on the ground."
+        addItemOnGroundMessage | otherwise                 = id
+
+        itemsOnGround :: [Item]
+        itemsOnGround = filter (\i -> i.pos .==. newpos) state.items
 
         newpos  = state.player.pos .+. delta
         canMove = isValidMove state.level newpos
@@ -380,9 +388,9 @@ numbers = M.fromList [48 // 0, 49 // 1, 50 // 2, 51 // 3, 52  // 4, 53  // 5, 54
 pickUp :: Point -> GameState -> GameState
 pickUp point (Game state) =
     case head (filter (\i -> i.pos .==. point) state.items) of
-        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found " ++ show points ++ " $!") $ Game state { items = deleteItem state.items point, points = state.points + points }
+        Just ( { itemType = Loot { value = points } } ) -> addMsg ("You found an item worth of " ++ show points ++ " gold coins!") $ Game state { items = deleteItem state.items point, points = state.points + points }
         Just item -> case ( ( carryingWeight (M.values state.equipments) + carryingWeight state.inventory ) / maxCarryingCapacity state.player ) < 110 of
-                         true  -> addMsg ("You acquired: " ++ show item.itemType) $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
+                         true  -> addMsg ("You picked up " ++ show item.itemType ++ ".") $ Game state { items = deleteItem state.items point, inventory = item : state.inventory }
                          false -> addMsg "You can't carry that much weight!" $ Game state
         Nothing   -> Game state
     where
@@ -395,7 +403,7 @@ pickUp point (Game state) =
 dropItem :: Number -> GameState -> GameState
 dropItem itemNumber g@(Game state@{ window = InventoryW wi, inventory = inv, items = itemsOnGround }) = 
     case (!!) inv i of
-        (Just item) -> addMsg ("You dropped: " ++ show item.itemType) $ (Game state { inventory = deleteAt i 1 inv, items = (item { pos = state.player.pos }) : itemsOnGround, window = InventoryW wi { index = 0 } })
+        (Just item) -> addMsg ("You dropped " ++ show item.itemType ++ ".") $ (Game state { inventory = deleteAt i 1 inv, items = (item { pos = state.player.pos }) : itemsOnGround, window = InventoryW wi { index = 0 } })
         Nothing -> g
     where
         i = itemNumber + wi.index * 10

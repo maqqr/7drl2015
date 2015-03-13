@@ -299,7 +299,7 @@ data ItemType = Loot   { value :: Number }
               | Ring
 
 instance showItemType :: Show ItemType where
-    show (Loot   { value = val })                         = show val ++ " $"
+    show (Loot   { value = val })                         = "an item worth of " ++ show val ++ " gold coins"
     show (Weapon { weaponType = t, material = mat, prefix = [] })         = show t
     show (Weapon { weaponType = t, material = mat, prefix = prefixList }) = showPrefixWeapon prefixList ++ " " ++ show mat ++ " " ++ show t
     show (Armor  { material = mat, prefix = [] })         = show mat ++ " armor"
