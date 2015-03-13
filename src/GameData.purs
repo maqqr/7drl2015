@@ -45,9 +45,10 @@ type Stats =
     , int   :: Number
     }
 
-defaultStats = { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 10 }
+defaultStats = { maxHp: 10, hp: 10, str: 10, dex: 10, int: 10 }
 
-guardStats = { maxHp: 20, hp: 20, def: 10, str: 8, dex: 8, int: 10 }
+guardStats = { maxHp: 20, hp: 20, str: 8, dex: 8, int: 10 }
+archerStats = { maxHp: 10, hp: 10, str: 6, dex: 10, int: 10 }
 
 statsToString :: Stats -> String
 statsToString { maxHp = mh, hp  = h, str = s, dex = d, int = i } = "Hp: " ++ show h ++ "/" ++ show mh ++ ". Str: " ++ show s ++ ". Dex: " ++ show d ++ ". Int: " ++ show i ++"."
