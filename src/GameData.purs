@@ -246,12 +246,12 @@ prefixStatWeapon Heavy      = WeaponStat { damage:  2, weight:  3, attackSpeed: 
 prefixStatWeapon _          = mempty
 
 prefixStatArmor :: ArmorPrefix -> ArmorStat
-prefixStatArmor BrokenA     = ArmorStat { defence:-1, weight: -5 }
-prefixStatArmor RustyA      = ArmorStat { defence: 1, weight:  5 }
-prefixStatArmor MasterworkA = ArmorStat { defence: 5, weight:  5 }
-prefixStatArmor GodlyA      = ArmorStat { defence: 7, weight: 10 }
-prefixStatArmor LightA      = ArmorStat { defence: 0, weight:-10 }
-prefixStatArmor HeavyA      = ArmorStat { defence: 2, weight: 10 }
+prefixStatArmor BrokenA     = ArmorStat { defence: -1, weight:  -5 }
+prefixStatArmor RustyA      = ArmorStat { defence:  1, weight:   5 }
+prefixStatArmor MasterworkA = ArmorStat { defence:  5, weight:   5 }
+prefixStatArmor GodlyA      = ArmorStat { defence:  7, weight:  10 }
+prefixStatArmor LightA      = ArmorStat { defence:  0, weight: -10 }
+prefixStatArmor HeavyA      = ArmorStat { defence:  2, weight:  10 }
 prefixStatArmor _          = mempty
 
 showPrefixWeapon :: [WeaponPrefix] -> String

@@ -171,10 +171,10 @@ drawGame console g@(Game state) = do
         drawFacing p dir | otherwise = return unit
 
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
-        drawCreatureType d Player  = d (fromCode 240) "FF0000"
+        drawCreatureType d Player  = d (fromCode 241) "FF0000"
         drawCreatureType d Guard   = d (fromCode 240) "0000FF"
-        drawCreatureType d Archer  = d (fromCode 240) "FF2EB9"
-        drawCreatureType d Peasant = d (fromCode 240) "AAAAFF"
+        drawCreatureType d Archer  = d (fromCode 242) "FF2EB9"
+        drawCreatureType d Peasant = d (fromCode 241) "AAAAFF"
         drawCreatureType d _       = d "?" "FFFFFF"
 
         fromCode :: Number -> String

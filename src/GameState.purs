@@ -42,7 +42,7 @@ data GameWindow = GameW
 type Memory = M.Map (Tuple Number Number) Boolean
 
 data GameState = Game { level         :: Level
-					  , memory        :: Memory
+                      , memory        :: Memory
                       , player        :: Creature
                       , npcs          :: [Creature]
                       , items         :: [Item]
@@ -169,8 +169,9 @@ sneakSpeedModifier _                           speed = speed
 
 -- Movement speed modifier.
 moveModeModifier g@(Game { move = SneakMode }) speed = sneakSpeedModifier g speed
-moveModeModifier (Game { move = RunMode })   speed = floor (speed / 1.5)
-moveModeModifier _                           speed = speed
+moveModeModifier g@(Game { move = RunMode })   speed = floor (speed / (1.2 * athleticsSkill g))
+    where athleticsSkill (Game state) = fromMaybe 0 $ (\s -> s.level) <$> M.lookup Athletics state.skills
+moveModeModifier _                             speed = speed
 
 -- Calculates speed value for player.
 calcSpeed :: GameState -> Number
