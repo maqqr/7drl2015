@@ -635,9 +635,9 @@ onKeyPress console g@(Game state@{ window = GameW }) key =
 onKeyPress console MainMenu key                              | key == 13       = return $ NameCreation { playerName: "" }
 onKeyPress console (NameCreation { playerName = pname }) key | key == 13       = return $ CharCreation { playerName: pname }
 onKeyPress console (NameCreation { playerName = xs })    key | key == 8        = return $ NameCreation { playerName: (take (strlen xs - 1) xs) }
-onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
+onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: singleton (fromCharCode key) }
 onKeyPress console (NameCreation { playerName = xs })    key | strlen xs > 15  = return $ NameCreation { playerName: xs }
-onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
+onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: xs ++ (toLower <<< singleton $ fromCharCode key) }
 
 -- Select class in character creation
 onKeyPress console (CharCreation { playerName = xs }) key =
@@ -688,7 +688,7 @@ onKeyPress console u@(UseSkillPoints { playerName = xs, skillPoints = sp, skills
                 raiseSkills i skills = M.fromList $ raiseSkill i $ M.toList skills
 
 
-onKeyPress _ st _ = return st
+onKeyPress _ g _ = return g
 
 
 main = J.ready $ withConsole 80 25 MainMenu {onKeyPress: onKeyPress, onUpdate: onUpdate}
