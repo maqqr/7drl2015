@@ -168,7 +168,14 @@ allLevels = [{ name: "the tutorial village"
              , itemPos: [p 55 6, p 62 5, p 23 9]
              , lootPos: [p 40 9, p 48 9, p 64 9, p 66 9, p 21 9, p 22 9]
              , npcPos: [patrol (p 59 9)]
-             , startPos: {x: 2, y: 7}}]
+             , startPos: {x: 2, y: 7}}
+
+            ,{ name: "a small castle"
+             , plan: castleLevel
+             , itemPos: []
+             , lootPos: [p 9 16, p 10 16, p 11 16]
+             , npcPos: [patrol (p 59 9)]
+             , startPos: {x: 2, y: 15}}]
     where
         p x y = {x: x, y: y}
 

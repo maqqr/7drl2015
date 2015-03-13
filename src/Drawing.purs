@@ -92,18 +92,15 @@ drawGame console g@(Game state) = do
     drawCreature offset state.player
     drawString console ("HP: " ++ show (state.player.stats.hp) ++ "/" ++ show (state.player.stats.maxHp)) "FF0000" 2 24
     --drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
-    drawString console ("Loot collected " ++ show lootPercentage ++ "%") lootColor 13 24
+    drawString console ("Loot collected " ++ show (lootPercentage g) ++ "%") lootColor 13 24
     drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 33 24
     drawString console (showPoint state.player.pos) "FF0000" 70 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return $ Game state { memory = updateMemory state.memory }
     where
-        lootPercentage :: Number
-        lootPercentage = floor $ 100 * (state.points / state.pointsLevel)
-
         lootColor :: String
-        lootColor | lootPercentage >= 50 = "00FF00"
-        lootColor | otherwise            = "FF0000"
+        lootColor | lootPercentage g >= 50 = "00FF00"
+        lootColor | otherwise              = "FF0000"
 
         updateMemory :: Memory -> Memory
         updateMemory m' = foldl (\m p -> M.insert (Tuple p.x p.y) true m) m' $ filter playerCanSee (pointsAroundPlayer 12)

@@ -4,7 +4,7 @@ import Data.Char
 import Data.String hiding (length, drop)
 import Data.Maybe
 import Data.Tuple
-import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, filter, drop, deleteAt, delete)
+import Data.Array ((!!), (..), (\\), map, updateAt, modifyAt, range, length, head, filter, drop, deleteAt, delete)
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
@@ -327,15 +327,34 @@ canGrab level c = climb || (isFree {x:0, y: 1} && (ledge (-1) || ledge 1))
 playerCannotAct :: forall r. Level -> { pos :: Point, vel :: Point | r } -> Boolean
 playerCannotAct level c = inFreeFall level c && not (canGrab level c)
 
+levelDone :: GameState -> GameState
+levelDone g@(Game state) =
+    if length notPlayedMaps == 0 then victory
+    else let r = randInt 0 (length notPlayedMaps) g
+         in case notPlayedMaps !! r.n of
+            Nothing -> victory
+            Just i  -> case allLevels !! i of
+                           Nothing -> victory
+                           Just lvl -> setLevel lvl r.game            
+    where
+        victory :: GameState
+        victory = Victory { playerName: state.playerName, points: state.pointsTotal }
+
+        notPlayedMaps :: [Number]
+        notPlayedMaps = (0 .. (length allLevels - 1)) \\ state.playedMaps
 
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
     in if blockIndex >= 0 then
         updateWorld false (weaponStat $ playerWeapon g).attackSpeed $ playerAttack blockIndex g
         else if canMove then
-            updateWorld false (calcSpeed g) <<< addItemOnGroundMessage <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
+            checkEscape <<< updateWorld false (calcSpeed g) <<< addItemOnGroundMessage <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
+        checkEscape :: GameState -> GameState
+        checkEscape g | newpos.x < 0 = if lootPercentage g < 50 then addMsg "You can leave the map once you have collected 50% of the total loot." g else levelDone g
+        checkEscape g | otherwise    = g
+
         useMoveSkill :: GameState -> GameState
         useMoveSkill g@(Game state) | state.move == RunMode && not (delta .==. zerop) = (useSkill Athletics 50 2 g).game
         useMoveSkill g@(Game state) | state.move == SneakMode && canGetSneakSkill g && not (delta .==. zerop) = (useSkill Sneak 100 5 g).game
@@ -537,7 +556,8 @@ setLevel def (Game state) = arrivalMsg <<< setLevelPoints <<< genLoot <<< genIte
                                            , npcs   = map makeNpc def.npcPos
                                            , player = setMaxHp (state.player)
                                            , memory = M.fromList []
-                                           , pointsLevel = 0 }
+                                           , pointsLevel = 0
+                                           , points = 0 }
     where
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
