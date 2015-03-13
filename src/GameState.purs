@@ -60,17 +60,18 @@ data GameState = Game { level         :: Level
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
+               | UseSkillPoints { playerName :: String, skillPoints :: Number, skills :: Skills, player :: Creature }
                | Death { playerName :: String, points :: Number }
 
-initialState :: String -> GameState
-initialState pname = Game
+initialState :: String -> Skills -> Creature -> GameState
+initialState pname s pl = Game
         { level: lvl
         , player: pl
         , npcs: [testGuard]
         , items: replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
         , playerName: pname
         , points: 0
-        , skills: defaultSkills
+        , skills: s
         , inventory: []
         , equipments: M.fromList []
         , freeFallTimer: 0
@@ -85,8 +86,6 @@ initialState pname = Game
         }
     where
         lvl = stringToLevel castleLevel
-
-        pl = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: defaultStats, time: 0, vel: zerop, ai: NoAI }
 
         testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
 

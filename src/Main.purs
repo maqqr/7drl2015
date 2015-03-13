@@ -523,7 +523,53 @@ onKeyPress console (NameCreation { playerName = xs })    key | key == 8        =
 onKeyPress console (NameCreation { playerName = "" })    key                   = return $ NameCreation { playerName: (fromCharArray [fromCharCode key]) }
 onKeyPress console (NameCreation { playerName = xs })    key | strlen xs > 15  = return $ NameCreation { playerName: xs }
 onKeyPress console (NameCreation { playerName = xs })    key                   = return $ NameCreation { playerName: (xs ++ (fromCharArray [fromCharCode key])) }
-onKeyPress console (CharCreation { playerName = xs })    key | key == 65       = return $ initialState xs
+
+-- Select class in character creation
+onKeyPress console (CharCreation { playerName = xs }) key =
+    case M.lookup key numbers of
+        -- Just 9  -> return $ CharCreation { playerName: xs } -- Random class (?)  Now choosing 9 gives player the Developer class
+        Just i  -> return $ (UseSkillPoints { playerName: xs ++ " " ++ getStartingClassName i, skillPoints: getStartingSP i, skills: defaultSkills, player: getStartingPlayer i })
+        Nothing -> return $ CharCreation { playerName: xs }
+             where
+                getStartingPlayer :: Number -> Creature
+                getStartingPlayer i = { pos: {x: 4, y: 3}, dir: zerop, ctype: Player, stats: getStartingStats i, time: 0, vel: zerop, ai: NoAI }
+    
+                getStartingStats :: Number -> Stats
+                getStartingStats i =
+                    case (!!) startingStats i of
+                        Just s  -> s
+                        Nothing -> defaultStats
+    
+                getStartingSP :: Number -> Number
+                getStartingSP i =
+                    case (!!) startingSkillpoints i of
+                        Just sp -> sp
+                        Nothing -> 0
+
+                getStartingClassName :: Number -> String
+                getStartingClassName i =
+                    case (!!) startingClass i of
+                        Just sc -> sc
+                        Nothing -> "the cheater!"
+
+-- Using skill points in UseSkillPoints window
+onKeyPress console u@(UseSkillPoints { playerName = xs, skillPoints = sp, skills = s, player = pl }) key =
+     case M.lookup key numbers of
+        Just number -> case sp of
+                           1 -> return $ initialState xs (raiseSkills number s) pl
+                           _ -> return $ (UseSkillPoints { playerName: xs, skillPoints: sp - 1, skills: raiseSkills number s, player: pl })
+        Nothing     -> return u
+            where
+                raiseSkill :: Number -> [Tuple SkillType Skill] -> [Tuple SkillType Skill]
+                raiseSkill i list =
+                    case (!!) list i of
+                        Just (Tuple st { level = l, prog = p })  -> updateAt i (Tuple st { level: l + 1, prog: p }) list
+                        Nothing -> list
+
+                raiseSkills :: Number -> Skills -> Skills
+                raiseSkills i skills = M.fromList $ raiseSkill i $ M.toList skills
+
+
 onKeyPress _ st _ = return st
 
 
