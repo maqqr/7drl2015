@@ -140,7 +140,7 @@ drawGame console g@(Game state) = do
         drawCreatureType :: forall a. (String -> String -> a) -> CreatureType -> a
         drawCreatureType d Player  = d (fromCode 240) "FF0000"
         drawCreatureType d Guard   = d (fromCode 240) "0000FF"
-        drawCreatureType d Archer  = d (fromCode 240) "00FF00"
+        drawCreatureType d Archer  = d (fromCode 240) "FF2EB9"
         drawCreatureType d Peasant = d (fromCode 240) "AAAAFF"
         drawCreatureType d _       = d "?" "FFFFFF"
 
@@ -200,19 +200,21 @@ drawGame console (NameCreation {playerName = pname}) = do
     return (NameCreation {playerName: pname})
 drawGame console (CharCreation {playerName = pname}) = do
     clear console
-    drawString console ("Character Creation:   " ++ pname) "FF0000" 2 2
+    drawString console ("Character Creation:  " ++ pname) "FF0000" 2 2
 
-    drawString console "Press a to enter game" "FF0000" 2 20
+    drawString console "(SP = skill point)" "AAAAAA" 3 4
 
-    drawString console "(0) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
-    drawString console "(1) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
-    drawString console "(2) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 6
-    drawString console "(3) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 7
-    drawString console "(4) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 8
-    drawString console "(5) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 9
-    drawString console "(6) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
-    drawString console "(7) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
-    drawString console "(8) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
+    drawString console "Press 0-8 to select character class" "FF0000" 2 20
+
+    drawString console "(0) Archer      ( +2 dex | +1 str | +2 SP )" "336600" 3 6
+    drawString console "(1) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 7
+    drawString console "(2) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 8
+    drawString console "(3) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 9
+    drawString console "(4) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 10
+    drawString console "(5) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 11
+    drawString console "(6) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 12
+    drawString console "(7) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 13
+    drawString console "(8) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 14
 
     --drawString console "Prefix:" "FF0000" 46 13---------------------- TODO (if time)
     --drawString console "j) Strong (+1 str)" "336600" 47 15
@@ -224,10 +226,12 @@ drawGame console (CharCreation {playerName = pname}) = do
     return (CharCreation {playerName: pname})
 drawGame console (UseSkillPoints { playerName = pname, skillPoints = sp, skills = s, player = p }) = do
     clear console
-    drawString console ("Name: " ++ pname ++ " Skill points left: " ++ show sp) "FF0000" 2 2
+    drawString console ("Name: " ++ pname) "FF0000" 2 2
     drawString console (statsToString p.stats) "FF0000" 2 3
     drawString console ((drawSkillsInfo 0) $ M.toList s) "FF0000" 3 5
-    drawString console "Used skill points can't be taken back!" "FF0000" 2 20
+
+    drawString console ("Skill points left: " ++ show sp) "FF0000" 2 18
+    drawString console "Press 0-3 to select skill. Used skill points can't be taken back!" "FF0000" 2 20
     return (UseSkillPoints { playerName: pname, skillPoints: sp, skills: s, player: p })
         where
             drawSkillInfo :: Number -> Tuple SkillType Skill -> String

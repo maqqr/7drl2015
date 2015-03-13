@@ -33,7 +33,22 @@ function Console (width, height, gamestate, callbacks) {
     this.onUpdate = callbacks["onUpdate"];
     this.lastTime = Date.now();
     requestAnimFrame($.proxy(function() { this.loop() }, this));
+
+    this.scaleCanvas();
+    var thiss = this;
+    window.onresize = function () {
+        thiss.scaleCanvas();
+    };
 }
+
+Console.prototype.scaleCanvas = function() {
+    //console.log(this.renderer.view);
+    var width = window.innerWidth-30;
+    var ratio = this.renderer.view.height / this.renderer.view.width;
+    var height = width * ratio;
+    this.renderer.view.style.width = width+"px";
+    this.renderer.view.style.height = height+"px";
+};
 
 Console.prototype.initCharMap = function() {
     this.chars = [];

@@ -152,10 +152,11 @@ stringToLevel strs = Level $ { width: S.length (U.head strs), height: length str
 allLevels :: [LevelDefinition]
 allLevels = []
 
-type LevelDefinition = { name    :: String
-                       , plan    :: [String]
-                       , itemPos :: [Point]
-                       , lootPos :: [Point]
+type LevelDefinition = { name     :: String
+                       , plan     :: [String]
+                       , itemPos  :: [Point]
+                       , lootPos  :: [Point]
+                       , startPos :: Point
                        }
 
 emptyLevel :: [String]
