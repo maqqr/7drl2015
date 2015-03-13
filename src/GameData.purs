@@ -81,6 +81,35 @@ defaultSkills = M.fromList [Tuple WeaponSkill {level: 0, prog: 0}
                            ,Tuple Lockpick { level: 0, prog: 0}
                            ]
 
+startingClass :: [String]
+startingClass = ["the archer", "the knight", "the monk", "the ninja", "the peasant", "the rogue", "the scholar", "the skillmaster", "the soldier", "the developer"]
+
+startingStats :: [Stats]
+startingStats = [ { maxHp: 10, hp: 10, def: 10, str: 11, dex: 12, int: 10 } -- Archer
+                , { maxHp: 10, hp: 10, def: 10, str: 14, dex:  9, int: 10 } -- Knight
+                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 11, int: 12 } -- Monk 
+                , { maxHp: 10, hp: 10, def: 10, str:  9, dex: 14, int: 10 } -- Ninja 
+                , { maxHp:  9, hp:  9, def:  9, str:  9, dex:  9, int:  9 } -- Peasant 
+                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 11, int: 11 } -- Rogue
+                , { maxHp: 10, hp: 10, def: 10, str: 09, dex: 11, int: 13 } -- Scholar 
+                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 11 } -- Skillmaster
+                , { maxHp: 10, hp: 10, def: 10, str: 12, dex: 11, int: 10 } -- Soldier 
+                , { maxHp: 99, hp: 99, def: 99, str: 99, dex: 99, int: 99 } -- Developer
+                ]
+
+startingSkillpoints :: [Number]
+startingSkillpoints = [ 2 -- Archer
+                      , 2 -- Knight
+                      , 2 -- Monk 
+                      , 2 -- Ninja 
+                      , 1 -- Peasant 
+                      , 5 -- Rogue
+                      , 5 -- Scholar 
+                      , 8 -- Skillmaster
+                      , 2 -- Soldier 
+                      , 99 -- Developer
+                      ]
+
 skillsInfo :: Skills -> String
 skillsInfo skills = skillsToString $ M.toList skills
     where

@@ -1,10 +1,12 @@
 module Drawing where
 
+import Data.Tuple
 import Data.Char
 import Data.Maybe
 import Data.String hiding (length, drop)
 import Data.Array ((!!), (..), map, range, length, head, filter)
 import Graphics.CanvasConsole
+import qualified Data.Map as M
 import Math
 
 import GameState
@@ -202,17 +204,17 @@ drawGame console (CharCreation {playerName = pname}) = do
 
     drawString console "Press a to enter game" "FF0000" 2 20
 
-    drawString console "a) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
-    drawString console "b) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
-    drawString console "c) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 6
-    drawString console "d) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 7
-    drawString console "e) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 8
-    drawString console "f) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 9
-    drawString console "g) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
-    drawString console "h) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
-    drawString console "i) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
+    drawString console "(0) Archer      ( +2 dex | +1 str | +2 SP ) (SP = skill point)" "336600" 3 4
+    drawString console "(1) Knight      ( +4 str | -1 dex | +2 SP )" "B8B8B8" 3 5
+    drawString console "(2) Monk        ( +2 int | +1 dex | +2 SP )" "E6AC00" 3 6
+    drawString console "(3) Ninja       ( +4 dex | -1 str | +2 SP )" "5C5C5C" 3 7
+    drawString console "(4) Peasant     ( -1 all |        | +1 SP )" "00B36B" 3 8
+    drawString console "(5) Rogue       ( +1 dex | +1 int | +5 SP )" "5C5C5C" 3 9
+    drawString console "(6) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
+    drawString console "(7) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
+    drawString console "(8) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
 
-    --drawString console "Prefix:" "FF0000" 46 13
+    --drawString console "Prefix:" "FF0000" 46 13---------------------- TODO (if time)
     --drawString console "j) Strong (+1 str)" "336600" 47 15
     --drawString console "k) Weak   (-1 str)" "FF0000" 47 16
     --drawString console "l) Agile  (+1 dex)" "336600" 47 17
@@ -220,6 +222,21 @@ drawGame console (CharCreation {playerName = pname}) = do
     --drawString console "n) Wise   (+1 int)" "336600" 47 19
     --drawString console "q) Dumb   (-1 int)" "FF0000" 47 20
     return (CharCreation {playerName: pname})
+drawGame console (UseSkillPoints { playerName = pname, skillPoints = sp, skills = s, player = p }) = do
+    clear console
+    drawString console ("Name: " ++ pname ++ " Skill points left: " ++ show sp) "FF0000" 2 2
+    drawString console (statsToString p.stats) "FF0000" 2 3
+    drawString console ((drawSkillsInfo 0) $ M.toList s) "FF0000" 3 5
+    drawString console "Used skill points can't be taken back!" "FF0000" 2 20
+    return (UseSkillPoints { playerName: pname, skillPoints: sp, skills: s, player: p })
+        where
+            drawSkillInfo :: Number -> Tuple SkillType Skill -> String
+            drawSkillInfo i (Tuple sType { level = l, prog = p }) = fill ("(" ++ show i ++ "): " ++ show sType ++ " skill. ") 25 ++ " Level: " ++ show l ++ "."
+            
+            drawSkillsInfo :: Number -> [Tuple SkillType Skill] -> String
+            drawSkillsInfo i [] = ""
+            drawSkillsInfo i (x:xs) = drawSkillInfo i x ++ ("\n") ++ drawSkillsInfo (i + 1) xs
+
 drawGame console (Death { playerName = pname, points = p }) = do
     clear console
     drawString console (pname ++ " has died.\n\nScore: " ++ show p ++ "\n\n\n\nPress Enter to start again.") "990000" 5 4
