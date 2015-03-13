@@ -433,6 +433,29 @@ randomWeaponPrefix = unsafeChoice [Broken, Rusty, Dull, Sharp, Lethal, Masterwor
 randomArmorPrefix :: GameState -> { i :: ArmorPrefix, game :: GameState }
 randomArmorPrefix = unsafeChoice [BrokenA, RustyA, MasterworkA, LightA, HeavyA, GodlyA]
 
+randomWeaponType :: GameState -> { i :: WeaponType, game :: GameState }
+randomWeaponType = unsafeChoice [Sword, Axe, Dagger]
+
+randomWeapon :: GameState -> { i :: ItemType, game :: GameState }
+randomWeapon g = let mat   = randomWeaponMaterial g
+                     wtype = randomWeaponType mat.game
+                     pfx   = randomWeaponPrefix wtype.game
+                 in { i: Weapon { weaponType: wtype.i, material: mat.i, prefix: [pfx.i] }, game: pfx.game }
+
+randomArmor :: GameState -> { i :: ItemType, game :: GameState }
+randomArmor g = let mat = randomArmorMaterial g
+                    pfx = randomArmorPrefix mat.game
+                in { i: Armor { material: mat.i, prefix: [pfx.i] }, game: pfx.game }
+
+randomShield :: GameState -> { i :: ItemType, game :: GameState }
+randomShield g = let mat = randomArmorMaterial g
+                     pfx = randomArmorPrefix mat.game
+                 in { i: Shield { material: mat.i, prefix: [pfx.i] }, game: pfx.game }
+
+randomItem :: Point -> GameState -> { i :: Item, game :: GameState }
+randomItem p g = let f = unsafeChoice [randomWeapon, randomArmor, randomShield] g
+                     r = f.i f.game
+                 in { i: { itemType: r.i, pos: p, vel: zerop }, game: r.game }
 
 randomLoot :: Point -> GameState -> { item :: Item, game :: GameState }
 randomLoot p g = let r = randInt 10 100 g in { item: { itemType: Loot { value: r.n }, pos: p, vel: zerop }, game: r.game }
