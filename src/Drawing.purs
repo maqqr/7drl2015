@@ -3,6 +3,7 @@ module Drawing where
 import Data.Tuple
 import Data.Char
 import Data.Maybe
+import Data.Foldable
 import Data.String hiding (length, drop)
 import Data.Array ((!!), (..), map, range, length, head, filter)
 import Graphics.CanvasConsole
@@ -93,8 +94,11 @@ drawGame console g@(Game state) = do
     drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 30 24
     drawString console (showPoint state.player.pos) "FF0000" 70 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
-    return g
+    return $ Game state { memory = updateMemory state.memory }
     where
+        updateMemory :: Memory -> Memory
+        updateMemory m' = foldl (\m p -> M.insert (Tuple p.x p.y) true m) m' $ filter playerCanSee (pointsAroundPlayer 12)
+
         viewportPoints :: [Point]
         viewportPoints = do
             x' <- 0 .. 79
@@ -161,8 +165,9 @@ drawGame console g@(Game state) = do
         drawItemType d _ = d "?" "FFFFFF"
 
         drawTileWithFov :: forall a. Point -> (String -> String -> a) -> Maybe Tile -> a
-        drawTileWithFov p d t | playerCanSee p = drawTile d t
-        drawTileWithFov p d t | otherwise      = d (fromCode 178) "111111"
+        drawTileWithFov p d t | playerCanSee p                        = drawTile false d t
+        drawTileWithFov p d t | M.member (Tuple p.x p.y) state.memory = drawTile true d t
+        drawTileWithFov p d t | otherwise                             = d (fromCode 178) "111111"
 
         playerCanSee :: Point -> Boolean
         -- playerCanSee p = true
@@ -172,24 +177,27 @@ drawGame console g@(Game state) = do
             || lineOfSight state.level (state.player.pos .+. {x: 0, y: -1}) p
         playerCanSee p | otherwise = lineOfSight state.level state.player.pos p
 
-        drawTile :: forall a. (String -> String -> a) -> Maybe Tile -> a
-        drawTile d (Just Air)        = d (fromCode 176) "002456"
-        drawTile d (Just Ground)     = d (fromCode 176) "AAAAAA"
-        drawTile d (Just Grass)      = d (fromCode 176) "009900"
-        drawTile d (Just Wall)       = d (fromCode 219) "444422"
-        drawTile d (Just SWall)      = d (fromCode 219) "444422"
-        drawTile d (Just BrickWall)  = d (fromCode 220) "666666"
-        drawTile d (Just DoorLocked) = d "+" "661111"
-        drawTile d (Just DoorClosed) = d "+" "666633"
-        drawTile d (Just DoorOpen)   = d "|" "666633"
-        drawTile d (Just BgCave)     = d (fromCode 176) "484848"
-        drawTile d (Just BgHouse)    = d (fromCode 219) "222205"
-        drawTile d (Just Bush)       = d (fromCode 172) "009900"
-        drawTile d (Just Water)      = d (fromCode 247) "0000FF"
-        drawTile d (Just Stairs)     = d "<" "444422"
-        drawTile d (Just Trunk)      = d "I" "666633"
-        drawTile d (Just Leaves)     = d (fromCode 5) "005500"
-        drawTile d _                 = d "?" "FFFFFF"
+        drawTile :: forall a. Boolean -> (String -> String -> a) -> Maybe Tile -> a
+        drawTile dr d (Just Air)        = d (fromCode 176) $ iff dr "222222" "002456"
+        drawTile dr d (Just Ground)     = d (fromCode 176) $ iff dr "444444" "AAAAAA"
+        drawTile dr d (Just Grass)      = d (fromCode 176) $ iff dr "444444" "009900"
+        drawTile dr d (Just Wall)       = d (fromCode 219) $ iff dr "444444" "444422"
+        drawTile dr d (Just SWall)      = d (fromCode 219) $ iff dr "444444" "444422"
+        drawTile dr d (Just BrickWall)  = d (fromCode 220) $ iff dr "444444" "666666"
+        drawTile dr d (Just DoorLocked) = d "+" $ iff dr "444444" "661111"
+        drawTile dr d (Just DoorClosed) = d "+" $ iff dr "444444" "666633"
+        drawTile dr d (Just DoorOpen)   = d "|" $ iff dr "444444" "666633"
+        drawTile dr d (Just BgCave)     = d (fromCode 177) $ iff dr "333333" "666666"
+        drawTile dr d (Just BgHouse)    = d (fromCode 219) $ iff dr "222222" "222205"
+        drawTile dr d (Just Bush)       = d (fromCode 172) $ iff dr "444444" "009900"
+        drawTile dr d (Just Water)      = d (fromCode 247) $ iff dr "444444" "0000FF"
+        drawTile dr d (Just Stairs)     = d "<" $ iff dr "444444" "444422"
+        drawTile dr d (Just Trunk)      = d "I" $ iff dr "444444" "666633"
+        drawTile dr d (Just Leaves)     = d (fromCode 5) $ iff dr "444444" "005500"
+        drawTile dr d _                 = d "?" $ iff dr "444444" "FFFFFF"
+
+        -- Darker color for unseen, but remembered tiles.
+        iff dr col1 col2 = if dr then col1 else col2
 
 drawGame console MainMenu = do
     clear console

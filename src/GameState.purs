@@ -1,5 +1,6 @@
 module GameState where
 
+import Data.Tuple
 import Data.Maybe
 import Data.Array (length)
 import qualified Data.Map as M
@@ -38,7 +39,10 @@ data GameWindow = GameW
                 | InventoryW { index :: Number, command :: InventoryCommand , equip :: Maybe EquipmentSlot }
                 | SkillW
 
+type Memory = M.Map (Tuple Number Number) Boolean
+
 data GameState = Game { level         :: Level
+					  , memory        :: Memory
                       , player        :: Creature
                       , npcs          :: [Creature]
                       , items         :: [Item]
@@ -56,6 +60,7 @@ data GameState = Game { level         :: Level
                       , blink         :: Boolean -- Blinking indicators are drawn when true.
                       , move          :: MovementMode
                       , lvlnum        :: Number -- Number of levels played
+                      , closeDoor     :: Boolean -- Wait for door direction
                       }
                | MainMenu
                | NameCreation { playerName :: String }
@@ -66,6 +71,7 @@ data GameState = Game { level         :: Level
 initialState :: String -> Skills -> Creature -> GameState
 initialState pname s pl = Game
         { level: emptyLevel
+        , memory: M.fromList []
         , player: pl
         , npcs: [] -- [testGuard]
         , items: [] -- replicate 12 testItem1 ++ [testItem2, testItem3, testItem4]
@@ -83,6 +89,7 @@ initialState pname s pl = Game
         , blink: false
         , move: NormalMode
         , lvlnum: 0
+        , closeDoor: false
         }
     where
         testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }

@@ -46,7 +46,9 @@ type Stats =
     , int   :: Number
     }
 
-defaultStats = { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 10}
+defaultStats = { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 10 }
+
+guardStats = { maxHp: 20, hp: 20, def: 10, str: 8, dex: 8, int: 10 }
 
 statsToString :: Stats -> String
 statsToString { maxHp = mh, hp  = h, def = de, str = s, dex = d, int = i } = "Hp: " ++ show h ++ "/" ++ show mh ++ ". Defence: " ++ show de ++ ". Str: " ++ show s ++ ". Dex: " ++ show d ++ ". Int: " ++ show i ++"."
@@ -299,14 +301,15 @@ data ItemType = Loot   { value :: Number }
               | Ring
 
 instance showItemType :: Show ItemType where
-    show (Loot   { value = val })                         = "an item worth of " ++ show val ++ " gold coins"
-    show (Weapon { weaponType = t, material = mat, prefix = [] })         = show t
-    show (Weapon { weaponType = t, material = mat, prefix = prefixList }) = showPrefixWeapon prefixList ++ " " ++ show mat ++ " " ++ show t
-    show (Armor  { material = mat, prefix = [] })         = show mat ++ " armor"
-    show (Armor  { material = mat, prefix = prefixList }) = showPrefixArmor prefixList ++ " " ++ show mat ++ " armor"
-    show (Armor  { material = mat, prefix = [] })         = show mat ++ " shield"
-    show (Armor  { material = mat, prefix = prefixList }) = showPrefixArmor prefixList ++ " " ++ show mat ++ " shield"
-    show Ring                                             = "One ring to fold them and in Haskell bind them."
+    show (Loot   { value = val })                          = "an item worth of " ++ show val ++ " gold coins"
+    show (Weapon { weaponType = t, material = mat, prefix  = [] })         = show t
+    show (Weapon { weaponType = t, material = mat, prefix  = prefixList }) = showPrefixWeapon prefixList ++ " " ++ show mat ++ " " ++ show t
+    show (Armor  { material = mat, prefix = [] })          = show mat ++ " armor"
+    show (Armor  { material = mat, prefix = prefixList })  = showPrefixArmor prefixList ++ " " ++ show mat ++ " armor"
+    show (Shield  { material = mat, prefix = [] })         = show mat ++ " shield"
+    show (Shield  { material = mat, prefix = prefixList }) = showPrefixArmor prefixList ++ " " ++ show mat ++ " shield"
+    show Ring                                              = "One ring to fold them and in Haskell bind them."
+    show _                                                 = "unknown item"
 
 
 --------- ITEM ---------

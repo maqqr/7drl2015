@@ -8,6 +8,7 @@ import Data.Array ((!!), (..), map, updateAt, modifyAt, range, length, head, fil
 import Data.Foldable
 import qualified Data.Map as M
 import Control.Monad.Eff
+import Control.MonadPlus (guard)
 import qualified Control.Monad.JQuery as J
 import Debug.Trace
 import Math
@@ -105,13 +106,20 @@ updateCreatures advance g@(Game state') =
             let spotRoll     = randInt 0 99 g
                 newAlertAI   = updateAlertness spotRoll.n (get i g NoAI (\c -> c.ai))
                 changedAlert = modifyCreatureAt i spotRoll.game (\c ->c { ai = newAlertAI })
-            in updateAI changedAlert newAlertAI -- add updatePhysics?
+            in npcCloseDoor $ updateAI changedAlert newAlertAI -- add updatePhysics?
             where
                 -- Creature position
                 cpos :: Point
                 cpos = get i g zerop (\c -> c.pos)
 
+                npcCloseDoor :: GameState -> GameState
+                npcCloseDoor g@(Game state) =
+                    case getTile state.level cpos of
+                        Just DoorOpen -> setTile' cpos DoorClosed g
+                        _             -> g
+
                 lookingAtPlayer :: Boolean
+                lookingAtPlayer | state.move == RunMode                                            = true
                 lookingAtPlayer | get i g false (\c -> c.dir.x == 0)                               = true
                 lookingAtPlayer | get i g false (\c -> c.dir.x < 0) && cpos.x > state.player.pos.x = true
                 lookingAtPlayer | get i g false (\c -> c.dir.x > 0) && cpos.x < state.player.pos.x = true
@@ -213,17 +221,25 @@ updatePhysics _ c = c { vel = zerop }
 npcWeapon :: Creature -> Item
 npcWeapon _ = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: zerop, vel: zerop }
 
--- Get equipped weapon (If playuer has no weapon equipped use broken copper dagger)
+-- Get equipped weapon (if player has no weapon equipped use broken copper dagger)
 playerWeapon :: GameState -> Item
 playerWeapon (Game state@{ equipments = eq }) =
     case M.lookup WeaponSlot eq of
         Just item -> item
-        Nothing   -> { itemType: Weapon { weaponType: Dagger, material: Copper, prefix: [Broken] }, pos: zerop, vel: zerop }
+        Nothing   -> { itemType: Weapon { weaponType: Dagger, material: Copper, prefix: [] }, pos: zerop, vel: zerop }
 
 playerAttack :: Number -> GameState -> GameState
-playerAttack i g@(Game state) = let attack = playerHit g
-                                in if attack.hit then addMsg ("You hit the " ++ (get i g "" (\c -> show c.ctype)) ++ "!") $ modifyCreatureAt i attack.game (takeDamage (playerWeapon g) state.player)
-                                   else addMsg ("You missed the " ++ get i g "" (\c -> show c.ctype) ++ "!") attack.game
+playerAttack i g@(Game state) =
+    let attack = playerHit g
+    in if attack.hit then addMsg ("You hit the " ++ (get i g "" (\c -> show c.ctype)) ++ "!") <<< makeAlert $ modifyCreatureAt i attack.game (takeDamage (playerWeapon g) state.player)
+       else addMsg ("You missed the " ++ get i g "" (\c -> show c.ctype) ++ "!") attack.game
+    where
+        makeAlert :: GameState -> GameState
+        makeAlert g = modifyCreatureAt i g $ \c -> c { ai = alert c.ai }
+
+        alert :: AI -> AI
+        alert (AI _ st) = AI (Alert 10) st
+        alert _         = NoAI
 
 npcAttack :: Creature -> GameState -> GameState
 npcAttack c g = let attack = npcHit c g
@@ -366,7 +382,7 @@ playerJump g@(Game state) xdir | isValidMove state.level (state.player.pos .+. {
 playerJump g@(Game state) xdir | isClimbable state.level (state.player.pos .+. {x: xdir, y: -1}) =
     movePlayer {x: xdir, y: -1} g
 playerJump g@(Game state) xdir | otherwise =
-    Game state { player = state.player { vel = {x: xdir, y: -3} } }
+    Game state { player = state.player { vel = {x: xdir, y: -2} } }
 
 movementkeys :: M.Map Number Point
 movementkeys = M.fromList [numpad 8 // {x:  0, y: -1}
@@ -383,6 +399,32 @@ numberkeys = (48 .. 57) ++ (96 .. 105)
 numbers :: M.Map Number Number
 numbers = M.fromList [48 // 0, 49 // 1, 50 // 2, 51 // 3, 52  // 4, 53  // 5, 54  // 6, 55  // 7, 56  // 8, 57  // 9
                      ,96 // 0, 97 // 1, 98 // 2, 99 // 3, 100 // 4, 101 // 5, 102 // 6, 103 // 7, 104 // 8, 105 // 9]
+
+closeDoorDir :: Point -> GameState -> GameState
+closeDoorDir p g@(Game state) =
+    case getTile state.level (state.player.pos .+. p) of
+        Just DoorOpen -> addMsg "You close the door." $ setTile' (state.player.pos .+. p) DoorClosed g
+        _             -> addMsg "That is not a door." g
+
+closeDoor :: GameState -> GameState
+closeDoor g@(Game state) =
+    if length nearDoors > 0 then
+        if length nearDoors == 1 then case head nearDoors of Just p -> setTile' p DoorClosed g
+        else addMsg "Press direction to select which door to close." $ Game state { closeDoor = true }
+    else addMsg "There are no nearby doors to close." g
+    where
+        deltaDirs :: [Point]
+        deltaDirs = do
+            x <- -1 .. 1
+            y <- -1 .. 1
+            guard $ not (x == 0 && y == 0)
+            return {x: x, y: y}
+
+        nearDoors = filter (isDoor <<< getTile state.level) $ map (\p -> state.player.pos .+. p) deltaDirs
+
+        isDoor :: Maybe Tile -> Boolean
+        isDoor (Just DoorOpen) = true
+        isDoor _               = false
 
 -- Player tries to pick up an item.
 pickUp :: Point -> GameState -> GameState
@@ -490,7 +532,7 @@ generateItems (x:xs) f g =
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos, player = setMaxHp (state.player) }
+setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos, player = setMaxHp (state.player), memory = M.fromList [] }
     where
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
@@ -511,7 +553,7 @@ setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFind
         genLoot = generateItems def.lootPos randomLoot
 
         makeNpc :: { p :: Point, ctype :: CreatureType, ai :: AIState } -> Creature
-        makeNpc info = { pos: info.p, dir:zerop, ctype: info.ctype, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert info.ai }
+        makeNpc info = { pos: info.p, dir:zerop, ctype: info.ctype, stats: guardStats, time: 0, vel: zerop, ai: AI NoAlert info.ai }
 
 
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
@@ -579,6 +621,8 @@ onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" &&
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move == SneakMode = drawGame console $ Game state { move = NormalMode }
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move /= SneakMode = drawGame console $ Game state { move = SneakMode }
 
+onKeyPress console g@(Game state@{ window = GameW, closeDoor = cDoor }) key | cDoor              = drawGame console <<< (\(Game state) -> Game state { closeDoor = false }) $ closeDoorDir (fromMaybe zerop $ M.lookup key movementkeys) g
+onKeyPress console g@(Game state@{ window = GameW }) key | key == makeCharCode "C"               = drawGame console $ closeDoor g
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7                       = drawGame console $ playerJump g (-1)
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9                       = drawGame console $ playerJump g 1
 onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8                       = drawGame console $ playerJump g 0
