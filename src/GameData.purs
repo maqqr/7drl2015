@@ -40,7 +40,6 @@ unitp p = {x: sign p.x, y: sign p.y}
 type Stats = 
     { maxHp :: Number
     , hp    :: Number 
-    , def   :: Number
     , str   :: Number
     , dex   :: Number
     , int   :: Number
@@ -51,7 +50,7 @@ defaultStats = { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 10 }
 guardStats = { maxHp: 20, hp: 20, def: 10, str: 8, dex: 8, int: 10 }
 
 statsToString :: Stats -> String
-statsToString { maxHp = mh, hp  = h, def = de, str = s, dex = d, int = i } = "Hp: " ++ show h ++ "/" ++ show mh ++ ". Defence: " ++ show de ++ ". Str: " ++ show s ++ ". Dex: " ++ show d ++ ". Int: " ++ show i ++"."
+statsToString { maxHp = mh, hp  = h, str = s, dex = d, int = i } = "Hp: " ++ show h ++ "/" ++ show mh ++ ". Str: " ++ show s ++ ". Dex: " ++ show d ++ ". Int: " ++ show i ++"."
 statsToString _ = ""
 
 statModf :: Number -> Number
@@ -87,16 +86,16 @@ startingClass :: [String]
 startingClass = ["the archer", "the knight", "the monk", "the ninja", "the peasant", "the rogue", "the scholar", "the skillmaster", "the soldier", "the developer"]
 
 startingStats :: [Stats]
-startingStats = [ { maxHp: 10, hp: 10, def: 10, str: 11, dex: 12, int: 10 } -- Archer
-                , { maxHp: 10, hp: 10, def: 10, str: 14, dex:  9, int: 10 } -- Knight
-                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 11, int: 12 } -- Monk 
-                , { maxHp: 10, hp: 10, def: 10, str:  9, dex: 14, int: 10 } -- Ninja 
-                , { maxHp:  9, hp:  9, def:  9, str:  9, dex:  9, int:  9 } -- Peasant 
-                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 11, int: 11 } -- Rogue
-                , { maxHp: 10, hp: 10, def: 10, str: 09, dex: 11, int: 13 } -- Scholar 
-                , { maxHp: 10, hp: 10, def: 10, str: 10, dex: 10, int: 11 } -- Skillmaster
-                , { maxHp: 10, hp: 10, def: 10, str: 12, dex: 11, int: 10 } -- Soldier 
-                , { maxHp: 99, hp: 99, def: 99, str: 99, dex: 99, int: 99 } -- Developer
+startingStats = [ { maxHp: 10, hp: 10, str: 11, dex: 12, int: 10 } -- Archer
+                , { maxHp: 10, hp: 10, str: 14, dex:  9, int: 10 } -- Knight
+                , { maxHp: 10, hp: 10, str: 10, dex: 11, int: 12 } -- Monk 
+                , { maxHp: 10, hp: 10, str:  9, dex: 14, int: 10 } -- Ninja 
+                , { maxHp:  9, hp:  9, str:  9, dex:  9, int:  9 } -- Peasant 
+                , { maxHp: 10, hp: 10, str: 10, dex: 11, int: 11 } -- Rogue
+                , { maxHp: 10, hp: 10, str: 09, dex: 11, int: 13 } -- Scholar 
+                , { maxHp: 10, hp: 10, str: 10, dex: 10, int: 11 } -- Skillmaster
+                , { maxHp: 10, hp: 10, str: 12, dex: 11, int: 10 } -- Soldier 
+                , { maxHp: 99, hp: 99, str: 99, dex: 99, int: 99 } -- Developer
                 ]
 
 startingSkillpoints :: [Number]
@@ -125,7 +124,7 @@ skillsInfo skills = skillsToString $ M.toList skills
 data CreatureType = Player | Guard | Archer | Peasant
 
 instance showCT :: Show CreatureType where
-    show Player = "player"
+    show Player  = "player"
     show Guard   = "guard"
     show Archer  = "archer"
     show Peasant = "peasant"
