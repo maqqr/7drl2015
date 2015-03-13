@@ -17,6 +17,8 @@ foreign import makePathfinder
         easystar.setGrid(grid);
         easystar.setAcceptableTiles([1]);
         easystar.enableDiagonals();
+        easystar.w = grid[0].length;
+        easystar.h = grid.length;
         return easystar;
     }
     """ :: [[Number]] -> Pathfinder
@@ -28,6 +30,11 @@ foreign import astar_js
             return function (y0) {
                 return function (x1) {
                     return function (y1) {
+                        console.log("w: " + easystar.w + "  h:" + easystar.h);
+                        if (!(x0 > 0 && x0 < easystar.w && y0 > 0 && y0 < easystar.h
+                              && x1 > 0 && x1 < easystar.w && y1 > 0 && y1 < easystar.h)) {
+                            return [];
+                        }
                         var done = undefined;
                         easystar.findPath(x0, y0, x1, y1, function(path) {
                             done = path;

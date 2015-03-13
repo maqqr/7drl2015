@@ -85,7 +85,7 @@ initialState pname s pl = Game
         , lvlnum: 0
         }
     where
-        lvl = stringToLevel castleLevel
+        lvl = stringToLevel tutorialLevel
 
         testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
 
