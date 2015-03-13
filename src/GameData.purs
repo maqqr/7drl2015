@@ -288,7 +288,7 @@ instance showWeaponType :: Show WeaponType where
     show Sword     = "sword"
     show Axe       = "axe"
     show Dagger    = "dagger"
-    show Spear     = "spear"'
+    show Spear     = "spear"
     show Mace      = "mace"
     show BattleAxe = "battleaxe"
 
