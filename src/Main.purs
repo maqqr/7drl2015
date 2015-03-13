@@ -26,12 +26,13 @@ import Line
 strlen = Data.String.length
 
 -- Uses skill and gets experience.
-useSkill :: SkillType
+useSkill :: Number
+         -> SkillType
          -> Number -- Odds of success when unskilled (0 - 99)
          -> Number -- Experience gained
          -> GameState
          -> { success :: Boolean, game :: GameState }
-useSkill skillType odds expr g@(Game state) = { success: success, game: addExp gen.game }
+useSkill skillBonus skillType odds expr g@(Game state) = { success: success, game: addExp gen.game }
     where
         gen       = randInt 0 100 g
         finalOdds = odds * pow 1.2 (fromMaybe 0 $ (\s -> s.level) <$> M.lookup skillType state.skills)
@@ -253,7 +254,7 @@ baseHitChance :: Creature -> Number
 baseHitChance c = 50 + 5 * (statModf c.stats.dex)
 
 playerHit :: GameState -> { hit :: Boolean, game :: GameState }
-playerHit g@(Game state) = let u = useSkill WeaponSkill (baseHitChance state.player) 20 g
+playerHit g@(Game state) = let u = useSkill (weaponStat $ playerWeapon g).attackBonus WeaponSkill (baseHitChance state.player) 20 g
                            in { hit: u.success, game: u.game }
 
 npcHit :: Creature -> GameState -> { hit :: Boolean, game :: GameState }
@@ -359,8 +360,8 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
         checkEscape g | otherwise    = g
 
         useMoveSkill :: GameState -> GameState
-        useMoveSkill g@(Game state) | state.move == RunMode && not (delta .==. zerop) = (useSkill Athletics 50 2 g).game
-        useMoveSkill g@(Game state) | state.move == SneakMode && canGetSneakSkill g && not (delta .==. zerop) = (useSkill Sneak 100 5 g).game
+        useMoveSkill g@(Game state) | state.move == RunMode && not (delta .==. zerop) = (useSkill 0 Athletics 50 2 g).game
+        useMoveSkill g@(Game state) | state.move == SneakMode && canGetSneakSkill g && not (delta .==. zerop) = (useSkill 0 Sneak 100 5 g).game
         useMoveSkill g@(Game state) | otherwise = g
 
         canGetSneakSkill :: GameState -> Boolean
@@ -392,7 +393,7 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
         checkTile _          = g
 
         pickLock :: GameState
-        pickLock = let use = useSkill Lockpick 10 20 g
+        pickLock = let use = useSkill 0 Lockpick 10 20 g
                    in if use.success then addMsg "The door is locked. You managed to pick the lock." $ setTile' newpos DoorClosed use.game
                    else addMsg "The door is locked. You fail to pick the lock." use.game
 
