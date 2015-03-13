@@ -88,11 +88,10 @@ defaultSkills = M.fromList [Tuple WeaponSkill {level: 0, prog: 0}
                            ]
 
 startingClass :: [String]
-startingClass = ["the archer", "the knight", "the monk", "the ninja", "the peasant", "the rogue", "the scholar", "the skillmaster", "the soldier", "the developer"]
+startingClass = ["the knight", "the monk", "the ninja", "the peasant", "the rogue", "the scholar", "the skillmaster", "the soldier", "the developer"]
 
 startingStats :: [Stats]
-startingStats = [ { maxHp: 10, hp: 10, str: 11, dex: 12, int: 10 } -- Archer
-                , { maxHp: 10, hp: 10, str: 14, dex:  9, int: 10 } -- Knight
+startingStats = [ { maxHp: 10, hp: 10, str: 14, dex:  9, int: 10 } -- Knight
                 , { maxHp: 10, hp: 10, str: 10, dex: 11, int: 12 } -- Monk 
                 , { maxHp: 10, hp: 10, str:  9, dex: 14, int: 10 } -- Ninja 
                 , { maxHp:  9, hp:  9, str:  9, dex:  9, int:  9 } -- Peasant 
@@ -104,8 +103,7 @@ startingStats = [ { maxHp: 10, hp: 10, str: 11, dex: 12, int: 10 } -- Archer
                 ]
 
 startingSkillpoints :: [Number]
-startingSkillpoints = [ 2 -- Archer
-                      , 2 -- Knight
+startingSkillpoints = [ 2 -- Knight
                       , 2 -- Monk 
                       , 2 -- Ninja 
                       , 1 -- Peasant 
@@ -211,12 +209,12 @@ materialStatWeapon Adamantine = WeaponStat { damage:  3, weight:  4, attackSpeed
 materialStatWeapon _ = mempty
 
 materialStatArmor :: Material -> ArmorStat
-materialStatArmor Leather    = ArmorStat { defence: -2, weight: -2 }
-materialStatArmor Copper     = ArmorStat { defence: -1, weight: -1 }
-materialStatArmor Iron       = ArmorStat { defence:  0, weight:  1 }
-materialStatArmor Steel      = ArmorStat { defence:  1, weight:  2 }
-materialStatArmor Titanium   = ArmorStat { defence:  2, weight:  3 }
-materialStatArmor Adamantine = ArmorStat { defence:  3, weight:  4 }
+materialStatArmor Leather    = ArmorStat { defence: 1, weight: 10 }
+materialStatArmor Copper     = ArmorStat { defence: 2, weight: 30 }
+materialStatArmor Iron       = ArmorStat { defence: 3, weight: 35 }
+materialStatArmor Steel      = ArmorStat { defence: 4, weight: 45 }
+materialStatArmor Titanium   = ArmorStat { defence: 5, weight: 60 }
+materialStatArmor Adamantine = ArmorStat { defence: 7, weight: 60 }
 materialStatArmor _ = mempty
 
 instance showMaterial :: Show Material where
@@ -248,12 +246,12 @@ prefixStatWeapon Heavy      = WeaponStat { damage:  2, weight:  3, attackSpeed: 
 prefixStatWeapon _          = mempty
 
 prefixStatArmor :: ArmorPrefix -> ArmorStat
-prefixStatArmor BrokenA     = ArmorStat { defence: -3, weight: -3 }
-prefixStatArmor RustyA      = ArmorStat { defence: -2, weight:  1 }
-prefixStatArmor MasterworkA = ArmorStat { defence:  3, weight:  0 }
-prefixStatArmor GodlyA      = ArmorStat { defence:  5, weight:  0 }
-prefixStatArmor LightA      = ArmorStat { defence:  0, weight: -3 }
-prefixStatArmor HeavyA      = ArmorStat { defence:  4, weight:  5 }
+prefixStatArmor BrokenA     = ArmorStat { defence:-1, weight: -5 }
+prefixStatArmor RustyA      = ArmorStat { defence: 1, weight:  5 }
+prefixStatArmor MasterworkA = ArmorStat { defence: 5, weight:  5 }
+prefixStatArmor GodlyA      = ArmorStat { defence: 7, weight: 10 }
+prefixStatArmor LightA      = ArmorStat { defence: 0, weight:-10 }
+prefixStatArmor HeavyA      = ArmorStat { defence: 2, weight: 10 }
 prefixStatArmor _          = mempty
 
 showPrefixWeapon :: [WeaponPrefix] -> String
