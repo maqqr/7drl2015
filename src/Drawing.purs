@@ -213,7 +213,6 @@ drawGame console (CharCreation {playerName = pname}) = do
     drawString console "(6) Scholar     ( +3 int | -1 str | +5 SP )" "3D00CC" 3 10
     drawString console "(7) Skillmaster ( +1 int |        | +8 SP )" "00B336" 3 11
     drawString console "(8) Soldier     ( +2 str | +1 dex | +2 SP )" "9E9E9E" 3 12
-    -- drawString console "(9) Random" "336600" 3 4 -- TODO(?)
 
     --drawString console "Prefix:" "FF0000" 46 13---------------------- TODO (if time)
     --drawString console "j) Strong (+1 str)" "336600" 47 15

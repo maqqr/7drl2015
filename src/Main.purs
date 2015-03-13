@@ -213,9 +213,12 @@ updatePhysics _ c = c { vel = zerop }
 npcWeapon :: Creature -> Item
 npcWeapon _ = { itemType: Weapon { weaponType: Sword, material: Iron, prefix: [Masterwork] }, pos: zerop, vel: zerop }
 
--- todo: get player weapon from equipment
+-- Get equipped weapon (If playuer has no weapon equipped use broken copper dagger)
 playerWeapon :: GameState -> Item
-playerWeapon _ = { itemType: Weapon { weaponType: Axe, material: Iron, prefix: [Masterwork] }, pos: zerop, vel: zerop }
+playerWeapon (Game state@{ equipments = eq }) =
+    case M.lookup WeaponSlot eq of
+        Just item -> item
+        Nothing   -> { itemType: Weapon { weaponType: Dagger, material: Copper, prefix: [Broken] }, pos: zerop, vel: zerop }
 
 playerAttack :: Number -> GameState -> GameState
 playerAttack i g@(Game state) = let attack = playerHit g
@@ -244,6 +247,16 @@ takeDamage :: Item -> Creature -> Creature -> Creature
 takeDamage weapon attacker defender = defender { stats = defender.stats { hp = defender.stats.hp - damage } }
     where
         damage = (weaponStat weapon).damage + statModf attacker.stats.str
+
+takeFallingDamage :: Number -- starting y position
+                  -> Number -- ending y position
+                  -> Number -- weightRatio: inventory + equipments weight / maxCarryingCapacity weightRatio
+                  -> Creature -- player
+                  -> Creature 
+takeFallingDamage y0 y1 wr pl | y0 - y1 >= 3 = pl { stats = pl.stats { hp = pl.stats.hp - damage } }
+    where
+        damage = floor ((y0 - y1 - 2) * (1 + wr)) * ((y0 - y1 - 2) * (1 + wr))
+takeFallingDamage _ _ _ c = c
 
 
 -- Moves an object that has position. Checks collisions with solid tiles.
@@ -527,7 +540,7 @@ onKeyPress console (NameCreation { playerName = xs })    key                   =
 -- Select class in character creation
 onKeyPress console (CharCreation { playerName = xs }) key =
     case M.lookup key numbers of
-        -- Just 9  -> return $ CharCreation { playerName: xs } -- Random class (?)  Now choosing 9 gives player the Developer class
+        -- Just 9  -> return $ CharCreation { playerName: xs } -- uncomment to prevent the usage of developer class
         Just i  -> return $ (UseSkillPoints { playerName: xs ++ " " ++ getStartingClassName i, skillPoints: getStartingSP i, skills: defaultSkills, player: getStartingPlayer i })
         Nothing -> return $ CharCreation { playerName: xs }
              where

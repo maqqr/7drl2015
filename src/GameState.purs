@@ -132,7 +132,7 @@ maxCarryingCapacity :: Creature -> Number
 maxCarryingCapacity c = c.stats.str * 5 + 10
 
 speedWithItems :: Creature -> [Item] -> M.Map EquipmentSlot Item -> Number
-speedWithItems c inv m = floor $ 1000 - (c.stats.dex - 10) * 25 + (deltaWeight ( ( carryingWeight (M.values m) + carryingWeight inv ) / maxCarryingCapacity c ))
+speedWithItems c inv m = floor $ 1000 - (c.stats.dex - 10) * 25 + (deltaWeight ( 100 * ( carryingWeight (M.values m) + carryingWeight inv ) / maxCarryingCapacity c ))
     where
         deltaWeight :: Number -> Number
         deltaWeight x = 0.11 * x * x - 1.01 * x
