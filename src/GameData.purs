@@ -282,17 +282,23 @@ instance showArmorPrefix :: Show ArmorPrefix where
 
 --------- WEAPON TYPES ---------
 
-data WeaponType = Sword | Axe | Dagger
+data WeaponType = Sword | Axe | Dagger | Spear | Mace | BattleAxe
 
 instance showWeaponType :: Show WeaponType where
-    show Sword  = "sword"
-    show Axe    = "axe"
-    show Dagger = "dagger"
+    show Sword     = "sword"
+    show Axe       = "axe"
+    show Dagger    = "dagger"
+    show Spear     = "spear"'
+    show Mace      = "mace"
+    show BattleAxe = "battleaxe"
 
 weaponTypeStat :: WeaponType -> WeaponStat
-weaponTypeStat Sword  = WeaponStat { damage: 3, weight: 6, attackSpeed: 800,  attackBonus: 1 }
-weaponTypeStat Axe    = WeaponStat { damage: 5, weight: 8, attackSpeed: 1200, attackBonus: 0 }
-weaponTypeStat Dagger = WeaponStat { damage: 2, weight: 4, attackSpeed: 600,  attackBonus: 2 }
+weaponTypeStat Sword     = WeaponStat { damage: 3, weight:  6, attackSpeed:  800, attackBonus: 1 }
+weaponTypeStat Axe       = WeaponStat { damage: 5, weight:  8, attackSpeed: 1200, attackBonus: 0 }
+weaponTypeStat Dagger    = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
+weaponTypeStat Spear     = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
+weaponTypeStat Mace      = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
+weaponTypeStat BattleAxe = WeaponStat { damage: 9, weight: 10, attackSpeed: 2000, attackBonus: 2 }
 
 --------- ITEM TYPES ---------
 
