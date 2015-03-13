@@ -169,12 +169,12 @@ sneakSpeedModifier _                           speed = speed
 
 -- Movement speed modifier.
 moveModeModifier g@(Game { move = SneakMode }) speed = sneakSpeedModifier g speed
-moveModeModifier g@(Game { move = RunMode })   speed = floor (speed / (1.2 * athleticsSkill g))
+moveModeModifier g@(Game { move = RunMode })   speed = floor (speed / (1.0 + 0.1 * athleticsSkill g))
     where athleticsSkill (Game state) = fromMaybe 0 $ (\s -> s.level) <$> M.lookup Athletics state.skills
 moveModeModifier _                             speed = speed
 
 -- Calculates speed value for player.
 calcSpeed :: GameState -> Number
 calcSpeed g@(Game state) | isClimbable state.level state.player.pos && isValidMove state.level (state.player.pos .+. {x: 0, y: 1}) = sneakSpeedModifier g 1500
-calcSpeed g@(Game state) | inFreeFall state.level state.player = 500
+calcSpeed g@(Game state) | inFreeFall state.level state.player = 700
 calcSpeed g@(Game state) | otherwise = moveModeModifier g $ speedWithItems state.player state.inventory state.equipments
