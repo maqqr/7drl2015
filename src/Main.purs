@@ -335,13 +335,16 @@ levelDone g@(Game state) =
             Nothing -> victory
             Just i  -> case allLevels !! i of
                            Nothing -> victory
-                           Just lvl -> setLevel lvl r.game            
+                           Just lvl -> updateMapIndex i $ setLevel lvl r.game
     where
+        updateMapIndex :: Number -> GameState -> GameState
+        updateMapIndex newIndex (Game state) = Game state { playedMaps = state.mapIndex : state.playedMaps, mapIndex = newIndex }
+
         victory :: GameState
         victory = Victory { playerName: state.playerName, points: state.pointsTotal }
 
         notPlayedMaps :: [Number]
-        notPlayedMaps = (0 .. (length allLevels - 1)) \\ state.playedMaps
+        notPlayedMaps = filter (\i -> notElem i state.playedMaps && i /= state.mapIndex) (0 .. (length allLevels - 1))
 
 movePlayer :: Point -> GameState -> GameState
 movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
@@ -554,13 +557,16 @@ setLevel :: LevelDefinition -> GameState -> GameState
 setLevel def (Game state) = arrivalMsg <<< setLevelPoints <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $
                                 Game state { items  = []
                                            , npcs   = map makeNpc def.npcPos
-                                           , player = setMaxHp (state.player)
+                                           , player = setStartPos <<< setMaxHp $ state.player
                                            , memory = M.fromList []
                                            , pointsLevel = 0
                                            , points = 0 }
     where
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
+
+        setStartPos :: Creature -> Creature
+        setStartPos c = c { pos = def.startPos }
 
         setLevelPoints :: GameState -> GameState
         setLevelPoints (Game state) = Game state { pointsLevel = sum $ map itemValue state.items }
@@ -594,6 +600,8 @@ onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 -- onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
 -- In death, press enter to start again
 onKeyPress console (Death d) key | key == 13 = return $ MainMenu
+
+onKeyPress console (Victory v) key | key == 13 = return $ MainMenu
 
 onKeyPress console g@(Game state) _   | playerCannotAct state.level state.player = return g
 

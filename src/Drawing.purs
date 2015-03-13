@@ -59,7 +59,7 @@ drawFrame console = do
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game state@{ window = SkillW }) = do
     clear console
-    drawString console ("Name: " ++ state.playerName) "AAAAAA" 2 2
+    drawString console ("Name: " ++ state.playerName ++ "   " ++ "Total score: " ++ show state.pointsTotal) "AAAAAA" 2 2
     drawFrame console
     drawString console (skillsInfo state.skills) "AAAAAA" 2 6
     drawString console (statsToString state.player.stats) "AAAAAA" 3 4
@@ -289,7 +289,13 @@ drawGame console (UseSkillPoints { playerName = pname, skillPoints = sp, skills 
             drawSkillsInfo i [] = ""
             drawSkillsInfo i (x:xs) = drawSkillInfo i x ++ ("\n") ++ drawSkillsInfo (i + 1) xs
 
-drawGame console (Death { playerName = pname, points = p }) = do
+drawGame console g@(Death { playerName = pname, points = p }) = do
     clear console
     drawString console (pname ++ " has died.\n\nScore: " ++ show p ++ "\n\n\n\nPress Enter to start again.") "990000" 5 4
-    return (Death { playerName: pname, points: p })
+    return g
+
+drawGame console g@(Victory state) = do
+    clear console
+    drawString console ("Congratulations " ++ state.playerName ++ "!\n\nYou have proved that you are a master thief.\n\nYour final score is " ++ show state.points ++ ".") "AAAAAA" 5 5
+    drawString console "Press Enter to continue" "AAAAAA" 5 15
+    return g
