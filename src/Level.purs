@@ -166,10 +166,13 @@ allLevels = [{ name: "the tutorial village"
              , plan: tutorialLevel
              , itemPos: [p 55 6, p 62 5, p 23 9]
              , lootPos: [p 40 9, p 48 9, p 64 9, p 66 9, p 21 9, p 22 9]
-             , npcPos: [{ p: p 25 5, ctype: Guard, ai: Idle (p 25 5)}]
+             , npcPos: [patrol (p 59 9)]
              , startPos: {x: 2, y: 7}}]
     where
         p x y = {x: x, y: y}
+
+        idler p' = { p: p', ctype: Guard, ai: Idle p' }
+        patrol p' = { p: p', ctype: Guard, ai: Patrol p' }
 
 emptyLevel' :: [String]
 emptyLevel' =

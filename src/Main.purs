@@ -481,12 +481,20 @@ randomLoot p g = let r = randInt 10 100 g in { i: { itemType: Loot { value: r.n 
 
 
 generateItems :: [Point] -> (Point -> GameState -> { i :: Item, game :: GameState }) -> GameState -> GameState
-generateItems (x:xs) f g = let r = f x g in case r.game of (Game state) -> generateItems xs f (Game state { items = r.i : state.items })
+generateItems (x:xs) f g =
+    let r'      = randInt 0 100 g
+        r       = f x r'.game
+        addItem = r'.n < 50
+    in case r.game of
+        (Game state) -> generateItems xs f $ if addItem then (Game state { items = r.i : state.items }) else r.game
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos }
+setLevel def (Game state) = arrivalMsg <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $ Game state { items = [], npcs = map makeNpc def.npcPos, player = setMaxHp (state.player) }
     where
+        setMaxHp :: Creature -> Creature
+        setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
+
         setTiles :: GameState -> GameState
         setTiles (Game state) = Game state { level = stringToLevel def.plan }
 
@@ -571,10 +579,10 @@ onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "R" &&
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move == SneakMode = drawGame console $ Game state { move = NormalMode }
 onKeyPress console (Game state@{ move = move }) key | key == makeCharCode "S" && move /= SneakMode = drawGame console $ Game state { move = SneakMode }
 
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7               = drawGame console $ playerJump g (-1)
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9               = drawGame console $ playerJump g 1
-onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8               = drawGame console $ playerJump g 0
-onKeyPress console g@(Game state@{ window = GameW }) key | key == makeCharCode "G"       = drawGame console $ pickUp (state.player.pos) g
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 7                       = drawGame console $ playerJump g (-1)
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 9                       = drawGame console $ playerJump g 1
+onKeyPress console g@(Game state@{ window = GameW }) key | key == numpad 8                       = drawGame console $ playerJump g 0
+onKeyPress console g@(Game state@{ window = GameW }) key | key == makeCharCode "G" || key == 188 = drawGame console $ pickUp (state.player.pos) g
 onKeyPress console g@(Game state@{ window = GameW }) key =
     case M.lookup key movementkeys of
         Just delta -> drawGame console $ movePlayer delta g
