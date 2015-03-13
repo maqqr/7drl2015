@@ -88,7 +88,7 @@ initialState pname s pl = Game
         , messageBuf: []
         , pathfinder: makePathfinder []
         , window: GameW
-        , seed: 456977
+        , seed: 256987
         , blinkTimer: 0
         , blink: false
         , move: NormalMode

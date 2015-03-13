@@ -532,7 +532,7 @@ generateItems (x:xs) f g =
 generateItems []     _ g = g
 
 setLevel :: LevelDefinition -> GameState -> GameState
-setLevel def (Game state) = arrivalMsg <<< setTotalPoints <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $
+setLevel def (Game state) = arrivalMsg <<< setLevelPoints <<< genLoot <<< genItems <<< calcPathFinding <<< setTiles $
                                 Game state { items  = []
                                            , npcs   = map makeNpc def.npcPos
                                            , player = setMaxHp (state.player)
@@ -542,8 +542,8 @@ setLevel def (Game state) = arrivalMsg <<< setTotalPoints <<< genLoot <<< genIte
         setMaxHp :: Creature -> Creature
         setMaxHp c = c { stats = c.stats { hp = c.stats.maxHp } }
 
-        setTotalPoints :: GameState -> GameState
-        setTotalPoints (Game state) = Game state { pointsTotal = sum $ map itemValue state.items }
+        setLevelPoints :: GameState -> GameState
+        setLevelPoints (Game state) = Game state { pointsLevel = sum $ map itemValue state.items }
 
         itemValue :: Item -> Number
         itemValue { itemType = Loot loot } = loot.value
