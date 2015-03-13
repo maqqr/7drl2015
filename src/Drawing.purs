@@ -8,6 +8,7 @@ import Data.String hiding (length, drop)
 import Data.Array ((!!), (..), map, range, length, head, filter)
 import Graphics.CanvasConsole
 import qualified Data.Map as M
+import Debug.Trace
 import Math
 
 import GameState
@@ -41,21 +42,25 @@ drawFrame :: Console -> ConsoleEff Unit
 drawFrame console = do
     drawString console leftSideFrame  "990000" 0 0
     drawString console rightSideFrame "990000" 79 0
+    drawString console bar "990000" 1 0
+    drawString console bar "990000" 1 19
     where
         rightSideFrame :: String
-        rightSideFrame =  fromCode 187 : (fromCharArray (replicate ("\n" ++ fromCharCode 186) 18) ++ fromCode 188)
+        rightSideFrame = fromCode 187 ++ "\n" ++ joinWith "\n" (replicate 18 $ fromCode 186) ++ "\n" ++ fromCode 188
 
-        leftSideFrame :: String 
-        leftSideFrame =  ( fromCode 201 : (fromCharArray (replicate (fromCharCode 205) 78)) ) 
-                      ++ ( fromCharArray (replicate ("\n" ++ fromCharCode 186) 18) ) 
-                      ++ ( "\n" ++ fromCode 200 ++ fromCharArray (replicate (fromCharCode 205) 78) )
+        leftSideFrame :: String
+        leftSideFrame = fromCode 201 ++ "\n" ++ joinWith "\n" (replicate 18 $ fromCode 186) ++ "\n" ++ fromCode 200
+
+        bar :: String
+        bar = foldl (++) "" (replicate 78 $ fromCode 205)
+
 
 -- Draws the game state.
 drawGame :: Console -> GameState -> ConsoleEff GameState
 drawGame console g@(Game state@{ window = SkillW }) = do
     clear console
+    drawString console ("Name: " ++ state.playerName) "AAAAAA" 2 2
     drawFrame console
-    drawString console ("Name: " ++ state.playerName ++ " Points: " ++ show state.points) "AAAAAA" 2 2
     drawString console (skillsInfo state.skills) "AAAAAA" 2 6
     drawString console (statsToString state.player.stats) "AAAAAA" 3 4
     drawString console "Press ESC or A to close skill window." "AAAAAA" 1 18
@@ -109,12 +114,17 @@ drawGame console g@(Game state) = do
     mapM_ (drawCreature offset) state.npcs
     drawCreature offset state.player
     drawString console ("HP: " ++ show (state.player.stats.hp) ++ "/" ++ show (state.player.stats.maxHp)) "FF0000" 2 24
-    drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
-    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 30 24
+    --drawString console ("Points: " ++ (show (state.points))) "FF0000" 14 24
+    drawString console ("Loot collected " ++ show (lootPercentage g) ++ "%") lootColor 13 24
+    drawString console ("Movement mode: " ++ show state.move ++ "   Speed: " ++ show (calcSpeed g)) "FF0000" 33 24
     drawString console (showPoint state.player.pos) "FF0000" 70 24
     drawMessages console {x: 1, y: 23} 255 state.messageBuf
     return $ Game state { memory = updateMemory state.memory }
     where
+        lootColor :: String
+        lootColor | lootPercentage g >= 50 = "00FF00"
+        lootColor | otherwise              = "FF0000"
+
         updateMemory :: Memory -> Memory
         updateMemory m' = foldl (\m p -> M.insert (Tuple p.x p.y) true m) m' $ filter playerCanSee (pointsAroundPlayer 12)
 

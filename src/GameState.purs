@@ -63,12 +63,15 @@ data GameState = Game { level         :: Level
                       , move          :: MovementMode
                       , lvlnum        :: Number -- Number of levels played
                       , closeDoor     :: Boolean -- Wait for door direction
+                      , mapIndex      :: Number -- Current map index
+                      , playedMaps    :: [Number] -- Played map indices
                       }
                | MainMenu
                | NameCreation { playerName :: String }
                | CharCreation { playerName :: String }
                | UseSkillPoints { playerName :: String, skillPoints :: Number, skills :: Skills, player :: Creature }
                | Death { playerName :: String, points :: Number }
+               | Victory { playerName :: String, points :: Number }
 
 initialState :: String -> Skills -> Creature -> GameState
 initialState pname s pl = Game
@@ -88,12 +91,14 @@ initialState pname s pl = Game
         , messageBuf: []
         , pathfinder: makePathfinder []
         , window: GameW
-        , seed: 456977
+        , seed: 256987
         , blinkTimer: 0
         , blink: false
         , move: NormalMode
         , lvlnum: 0
         , closeDoor: false
+        , mapIndex: 0
+        , playedMaps: [0]
         }
     where
         testGuard = { pos: {x: 17, y: 16}, dir:zerop, ctype: Archer, stats: defaultStats, time: 0, vel: zerop, ai: AI NoAlert (Idle {x: 10, y: 20}) }
@@ -103,6 +108,9 @@ initialState pname s pl = Game
         testItem3 = { itemType: Weapon { weaponType: Axe, material: Steel, prefix: [Rusty] }, pos: {x: 40, y: 4}, vel: {x: 0, y: 0} }
         testItem4 = { itemType: Loot { value: 3 }, pos: {x: 5, y: 3}, vel: {x: 0, y: 0} }
 
+
+lootPercentage :: GameState -> Number
+lootPercentage (Game state) = floor $ 100 * (state.points / state.pointsLevel)
 
 data EquipmentSlot = WeaponSlot | ShieldSlot | ArmorSlot | RingSlot
 
