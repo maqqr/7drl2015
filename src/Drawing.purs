@@ -201,8 +201,15 @@ drawGame console g@(Game state) = do
 
 drawGame console MainMenu = do
     clear console
-    drawString console "RobberyRL" "FFFFFF" 12 5
-    drawString console "Press enter to start your adventure" "AAAAAA" 6 12
+    drawString console " ______      _     _                    ______ _     " "FFFFFF" 5 5
+    drawString console " | ___ \\    | |   | |                   | ___ \\ |    " "FFFFFF" 5 6
+    drawString console " | |_/ /___ | |__ | |__   ___ _ __ _   _| |_/ / |    " "FFFFFF" 5 7
+    drawString console " |    // _ \\| '_ \\| '_ \\ / _ \\ '__| | | |    /| |    " "FFFFFF" 5 8
+    drawString console " | |\\ \\ (_) | |_) | |_) |  __/ |  | |_| | |\\ \\| |____" "FFFFFF" 5 9
+    drawString console " \\_| \\_\\___/|_.__/|_.__/ \\___|_|   \\__, \\_| \\_\\_____/" "FFFFFF" 5 10
+    drawString console "                                    __/ |            " "FFFFFF" 5 11
+    drawString console "                                   |___/             " "FFFFFF" 5 12
+    drawString console "Press enter to start your adventure" "AAAAAA" 6 16
     return MainMenu
 drawGame console (NameCreation {playerName = pname}) = do
     clear console
