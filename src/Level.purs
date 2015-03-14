@@ -175,6 +175,20 @@ allLevels = [{ name: "the tutorial village"
              , itemPos: []
              , lootPos: [p 9 16, p 10 16, p 11 16]
              , npcPos: [patrol (p 59 9)]
+             , startPos: {x: 2, y: 15}}
+
+            ,{ name: "a small town with clock tower"
+             , plan: clockTower
+             , itemPos: []
+             , lootPos: [p 9 16, p 10 16, p 11 16]
+             , npcPos: [patrol (p 59 9)]
+             , startPos: {x: 2, y: 15}}
+
+            ,{ name: "a hidden pirate cove"
+             , plan: pirateCove
+             , itemPos: []
+             , lootPos: [p 9 16, p 10 16, p 11 16]
+             , npcPos: [patrol (p 59 9)]
              , startPos: {x: 2, y: 15}}]
     where
         p x y = {x: x, y: y}

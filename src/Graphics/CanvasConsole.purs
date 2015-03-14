@@ -87,3 +87,12 @@ foreign import drawString
            -> Number  -- X
            -> Number  -- Y
            -> Eff (con :: ConEff | eff) Unit
+
+foreign import randomInt
+    """
+    function randomInt(maxnum) {
+      return function() {
+        return rndInt(maxnum);
+      }
+    }
+    """ :: forall eff. Number -> Eff (con :: ConEff | eff) Number

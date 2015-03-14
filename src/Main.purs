@@ -712,7 +712,9 @@ onKeyPress console (CharCreation { playerName = xs }) key =
 onKeyPress console u@(UseSkillPoints { playerName = xs, skillPoints = sp, skills = s, player = pl }) key =
      case M.lookup key numbers of
         Just number -> case sp of
-                           1 -> return <<< setLevel (firstLevel allLevels) $ initialState xs (raiseSkills number s) pl
+                           1 -> do
+                               seed <- randomInt 50000
+                               return <<< setLevel (firstLevel allLevels) $ initialState seed xs (raiseSkills number s) pl
                            _ -> return $ (UseSkillPoints { playerName: xs, skillPoints: sp - 1, skills: raiseSkills number s, player: pl })
         Nothing     -> return u
             where

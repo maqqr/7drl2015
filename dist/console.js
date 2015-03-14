@@ -1,3 +1,7 @@
+function rndInt (maxnum) {
+    return Math.floor(Math.random() * maxnum);
+}
+
 function bresenhamjs(x0, y0, x1, y1) {
     var result = [];
     var dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;

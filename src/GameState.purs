@@ -73,8 +73,8 @@ data GameState = Game { level         :: Level
                | Death { playerName :: String, points :: Number }
                | Victory { playerName :: String, points :: Number }
 
-initialState :: String -> Skills -> Creature -> GameState
-initialState pname s pl = Game
+initialState :: Number -> String -> Skills -> Creature -> GameState
+initialState seed pname s pl = Game
         { level: emptyLevel
         , memory: M.fromList []
         , player: pl
@@ -91,7 +91,7 @@ initialState pname s pl = Game
         , messageBuf: []
         , pathfinder: makePathfinder []
         , window: GameW
-        , seed: 256987
+        , seed: seed
         , blinkTimer: 0
         , blink: false
         , move: NormalMode
