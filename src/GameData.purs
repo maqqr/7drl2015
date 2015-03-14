@@ -293,12 +293,12 @@ instance showWeaponType :: Show WeaponType where
     show BattleAxe = "battleaxe"
 
 weaponTypeStat :: WeaponType -> WeaponStat
-weaponTypeStat Sword     = WeaponStat { damage: 4, weight:  6, attackSpeed:  800, attackBonus: 2 }
-weaponTypeStat Axe       = WeaponStat { damage: 5, weight:  7, attackSpeed: 1200, attackBonus: 0 }
-weaponTypeStat Dagger    = WeaponStat { damage: 2, weight:  3, attackSpeed:  600, attackBonus: 3 }
-weaponTypeStat Spear     = WeaponStat { damage: 4, weight:  6, attackSpeed:  900, attackBonus: 2 }
-weaponTypeStat Mace      = WeaponStat { damage: 5, weight:  8, attackSpeed: 1000, attackBonus: 1 }
-weaponTypeStat BattleAxe = WeaponStat { damage: 9, weight: 12, attackSpeed: 1800, attackBonus:-1 }
+weaponTypeStat Sword     = WeaponStat { damage: 4, weight:  6, attackSpeed:  800, attackBonus:  2 }
+weaponTypeStat Axe       = WeaponStat { damage: 5, weight:  7, attackSpeed: 1200, attackBonus:  0 }
+weaponTypeStat Dagger    = WeaponStat { damage: 2, weight:  3, attackSpeed:  600, attackBonus:  3 }
+weaponTypeStat Spear     = WeaponStat { damage: 4, weight:  6, attackSpeed:  900, attackBonus:  2 }
+weaponTypeStat Mace      = WeaponStat { damage: 5, weight:  8, attackSpeed: 1000, attackBonus:  1 }
+weaponTypeStat BattleAxe = WeaponStat { damage: 9, weight: 12, attackSpeed: 1800, attackBonus: -1 }
 
 --------- ITEM TYPES ---------
 

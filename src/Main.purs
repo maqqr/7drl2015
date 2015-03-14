@@ -272,7 +272,7 @@ takeFallingDamage :: Number -- points dropped
 takeFallingDamage d wr pl | d >= 3 = pl { stats = pl.stats { hp = pl.stats.hp - damage } }
     where
         damage = floor ((d - 2) * (1 + wr)) * ((d - 2) * (1 + wr))
-takeFallingDamage _ _ _ c = c
+takeFallingDamage _ _ c = c
 
 
 -- Moves an object that has position. Checks collisions with solid tiles.
