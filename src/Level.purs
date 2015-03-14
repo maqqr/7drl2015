@@ -163,7 +163,7 @@ type LevelDefinition =
     }
 
 allLevels :: [LevelDefinition]
-allLevels = [{ name: "the tutorial village"
+allLevels = [{ name: "a small village"
              , plan: tutorialLevel
              , itemPos: [p 55 6, p 62 5, p 23 9]
              , lootPos: [p 40 9, p 48 9, p 64 9, p 66 9, p 21 9, p 22 9]
@@ -172,29 +172,32 @@ allLevels = [{ name: "the tutorial village"
 
             ,{ name: "a small castle"
              , plan: castleLevel
-             , itemPos: []
-             , lootPos: [p 9 16, p 10 16, p 11 16]
-             , npcPos: [patrol (p 59 9)]
+             , itemPos: [p 30 13, p 45 13, p 72 13, p 76 6, p 27 6]
+             , lootPos: [p 24 10, p 24 13, p 39 16, p 69 13, p 70 13, p 71 13]
+             , npcPos: [patrol (p 37 10), patrol (p 72 10), aIdle (p 76 3), aIdle (p 24 6)]
              , startPos: {x: 2, y: 15}}
 
             ,{ name: "a small town with clock tower"
              , plan: clockTower
-             , itemPos: []
-             , lootPos: [p 9 16, p 10 16, p 11 16]
-             , npcPos: [patrol (p 59 9)]
+             , itemPos: [p 31 14, p 24 9, p 29 2, p 43 14, p 56 17]
+             , lootPos: [p 19 17, p 10 16, p 11 16, p 40 11, p 40 14, p 42 14, p 44 17]
+             , npcPos: [aIdle (p 24 6), patrol (p 60 17), patrol (p 33 6)]
              , startPos: {x: 2, y: 15}}
 
             ,{ name: "a hidden pirate cove"
              , plan: pirateCove
-             , itemPos: []
-             , lootPos: [p 9 16, p 10 16, p 11 16]
-             , npcPos: [patrol (p 59 9)]
-             , startPos: {x: 2, y: 15}}]
+             , itemPos: [p 34 14, p 25 14, p 30 11, p 35 11, p 78 13]
+             , lootPos: [p 54 13, p 23 14, p 24 14, p 28 11, p 76 13, p 74 13]
+             , npcPos: [patrol (p 77 13), patrol (p 46 13)]
+             , startPos: {x: 3, y: 13}}]
     where
         p x y = {x: x, y: y}
 
         idler p' = { p: p', ctype: Guard, ai: Idle p' }
         patrol p' = { p: p', ctype: Guard, ai: Patrol p' }
+
+        aIdle p' = { p: p', ctype: Archer, ai: Idle p' }
+
 
 emptyLevel' :: [String]
 emptyLevel' =
@@ -298,8 +301,8 @@ pirateCove =
     ,".........................###############################....................I..S"
     ,".......................####ccccc#cccc#ccc################......................S"
     ,"......................#####ccccc*cccc*ccccc##########ccc.......................S"
-    ,"......................#####c#############ccccccc####cccc.........I....I........S"
-    ,".....................##ccc##c##############ccccccc+cccccc........SSSSSSCCCCCCCCS"
+    ,"......................#####c#############ccccccc####cccc........I....I.........S"
+    ,".....................##ccc##c##############ccccccc+cccccc.......SSSSSSCCCCCCCCCS"
     ,"####................###ccc+ccccccccccccc+cc#########SSSSSS==========SSSSSSSSSSSS"
     ,"#######...........################################========================SSSSSS"
     ,"###########======#################=============================================S"

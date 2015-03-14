@@ -354,8 +354,8 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
             checkEscape <<< updateWorld false (calcSpeed g) <<< addItemOnGroundMessage <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
-        checkEscape :: GameState -> GameState
-        checkEscape g | newpos.x < 0 = if lootPercentage g < 50 then addMsg "You can leave the map once you have collected 50% of the total loot." g else levelDone g
+        checkEscape :: GameState -> GameState --lootPercentage g < 50
+        checkEscape g | newpos.x < 0 = if false then addMsg "You can leave the map once you have collected 50% of the total loot." g else levelDone g
         checkEscape g | otherwise    = g
 
         useMoveSkill :: GameState -> GameState
