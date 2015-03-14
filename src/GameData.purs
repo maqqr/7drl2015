@@ -200,21 +200,21 @@ instance monoidWeaponStat :: Monoid WeaponStat where
 data Material = Wood | Copper | Iron | Steel | Titanium | Adamantine | Leather
 
 materialStatWeapon :: Material -> WeaponStat
-materialStatWeapon Wood       = WeaponStat { damage: -3, weight: -1, attackSpeed:  -50, attackBonus: 4 }
+materialStatWeapon Wood       = WeaponStat { damage: -3, weight:  0, attackSpeed:  -50, attackBonus: 0 }
 materialStatWeapon Copper     = WeaponStat { damage: -1, weight:  1, attackSpeed:  100, attackBonus: 0 }
 materialStatWeapon Iron       = WeaponStat { damage:  0, weight:  2, attackSpeed:  100, attackBonus: 0 }
 materialStatWeapon Steel      = WeaponStat { damage:  1, weight:  3, attackSpeed:  100, attackBonus: 0 }
 materialStatWeapon Titanium   = WeaponStat { damage:  2, weight:  4, attackSpeed:    0, attackBonus: 0 }
-materialStatWeapon Adamantine = WeaponStat { damage:  3, weight:  4, attackSpeed: -100, attackBonus: 1 }
+materialStatWeapon Adamantine = WeaponStat { damage:  3, weight:  3, attackSpeed: -100, attackBonus: 1 }
 materialStatWeapon _ = mempty
 
 materialStatArmor :: Material -> ArmorStat
 materialStatArmor Leather    = ArmorStat { defence: 1, weight: 10 }
-materialStatArmor Copper     = ArmorStat { defence: 2, weight: 30 }
-materialStatArmor Iron       = ArmorStat { defence: 3, weight: 35 }
-materialStatArmor Steel      = ArmorStat { defence: 4, weight: 45 }
-materialStatArmor Titanium   = ArmorStat { defence: 5, weight: 60 }
-materialStatArmor Adamantine = ArmorStat { defence: 7, weight: 60 }
+materialStatArmor Copper     = ArmorStat { defence: 2, weight: 25 }
+materialStatArmor Iron       = ArmorStat { defence: 3, weight: 40 }
+materialStatArmor Steel      = ArmorStat { defence: 4, weight: 40 }
+materialStatArmor Titanium   = ArmorStat { defence: 5, weight: 45 }
+materialStatArmor Adamantine = ArmorStat { defence: 7, weight: 35 }
 materialStatArmor _ = mempty
 
 instance showMaterial :: Show Material where
@@ -233,25 +233,25 @@ data WeaponPrefix = Broken | Rusty | Dull | Sharp | Lethal | Masterwork | Light 
 data ArmorPrefix = BrokenA | RustyA | MasterworkA | LightA | HeavyA | GodlyA
 
 prefixStatWeapon :: WeaponPrefix -> WeaponStat
-prefixStatWeapon Broken     = WeaponStat { damage: -3, weight: -1, attackSpeed:   50, attackBonus: -4 }
-prefixStatWeapon Rusty      = WeaponStat { damage: -2, weight:  1, attackSpeed:    0, attackBonus: -2 }
+prefixStatWeapon Broken     = WeaponStat { damage: -3, weight: -2, attackSpeed:   50, attackBonus: -4 }
+prefixStatWeapon Rusty      = WeaponStat { damage: -2, weight:  0, attackSpeed:    0, attackBonus: -2 }
 prefixStatWeapon Dull       = WeaponStat { damage: -1, weight:  0, attackSpeed:    0, attackBonus: -1 }
-prefixStatWeapon Sharp      = WeaponStat { damage:  1, weight:  0, attackSpeed:    0, attackBonus:  1 }
-prefixStatWeapon Lethal     = WeaponStat { damage:  2, weight:  0, attackSpeed:    0, attackBonus:  2 }
-prefixStatWeapon Masterwork = WeaponStat { damage:  3, weight:  0, attackSpeed: -100, attackBonus:  3 }
+prefixStatWeapon Sharp      = WeaponStat { damage:  1, weight:  0, attackSpeed:    0, attackBonus:  0 }
+prefixStatWeapon Lethal     = WeaponStat { damage:  2, weight:  0, attackSpeed:    0, attackBonus:  1 }
+prefixStatWeapon Masterwork = WeaponStat { damage:  3, weight: -1, attackSpeed:  -50, attackBonus:  2 }
 prefixStatWeapon Godly      = WeaponStat { damage:  4, weight:  0, attackSpeed: -200, attackBonus:  4 }
-prefixStatWeapon Light      = WeaponStat { damage:  0, weight: -2, attackSpeed: -100, attackBonus:  1 }
-prefixStatWeapon Balanced   = WeaponStat { damage:  1, weight:  0, attackSpeed: -100, attackBonus:  3 }
-prefixStatWeapon Heavy      = WeaponStat { damage:  2, weight:  3, attackSpeed:  100, attackBonus:  0 }
+prefixStatWeapon Light      = WeaponStat { damage:  0, weight: -2, attackSpeed: -150, attackBonus:  1 }
+prefixStatWeapon Balanced   = WeaponStat { damage:  1, weight:  0, attackSpeed:  -50, attackBonus:  3 }
+prefixStatWeapon Heavy      = WeaponStat { damage:  2, weight:  3, attackSpeed:  150, attackBonus: -1 }
 prefixStatWeapon _          = mempty
 
 prefixStatArmor :: ArmorPrefix -> ArmorStat
 prefixStatArmor BrokenA     = ArmorStat { defence: -1, weight:  -5 }
-prefixStatArmor RustyA      = ArmorStat { defence:  1, weight:   5 }
-prefixStatArmor MasterworkA = ArmorStat { defence:  5, weight:   5 }
-prefixStatArmor GodlyA      = ArmorStat { defence:  7, weight:  10 }
-prefixStatArmor LightA      = ArmorStat { defence:  0, weight: -10 }
-prefixStatArmor HeavyA      = ArmorStat { defence:  2, weight:  10 }
+prefixStatArmor RustyA      = ArmorStat { defence:  0, weight:   0 }
+prefixStatArmor MasterworkA = ArmorStat { defence:  1, weight:  -5 }
+prefixStatArmor GodlyA      = ArmorStat { defence:  4, weight:   0 }
+prefixStatArmor LightA      = ArmorStat { defence: -1, weight:  -5 }
+prefixStatArmor HeavyA      = ArmorStat { defence:  1, weight:  10 }
 prefixStatArmor _          = mempty
 
 showPrefixWeapon :: [WeaponPrefix] -> String
@@ -293,12 +293,12 @@ instance showWeaponType :: Show WeaponType where
     show BattleAxe = "battleaxe"
 
 weaponTypeStat :: WeaponType -> WeaponStat
-weaponTypeStat Sword     = WeaponStat { damage: 3, weight:  6, attackSpeed:  800, attackBonus: 1 }
-weaponTypeStat Axe       = WeaponStat { damage: 5, weight:  8, attackSpeed: 1200, attackBonus: 0 }
-weaponTypeStat Dagger    = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
-weaponTypeStat Spear     = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
-weaponTypeStat Mace      = WeaponStat { damage: 2, weight:  4, attackSpeed:  600, attackBonus: 2 }
-weaponTypeStat BattleAxe = WeaponStat { damage: 9, weight: 10, attackSpeed: 2000, attackBonus: 2 }
+weaponTypeStat Sword     = WeaponStat { damage: 4, weight:  6, attackSpeed:  800, attackBonus: 2 }
+weaponTypeStat Axe       = WeaponStat { damage: 5, weight:  7, attackSpeed: 1200, attackBonus: 0 }
+weaponTypeStat Dagger    = WeaponStat { damage: 2, weight:  3, attackSpeed:  600, attackBonus: 3 }
+weaponTypeStat Spear     = WeaponStat { damage: 4, weight:  6, attackSpeed:  900, attackBonus: 2 }
+weaponTypeStat Mace      = WeaponStat { damage: 5, weight:  8, attackSpeed: 1000, attackBonus: 1 }
+weaponTypeStat BattleAxe = WeaponStat { damage: 9, weight: 12, attackSpeed: 1800, attackBonus:-1 }
 
 --------- ITEM TYPES ---------
 
