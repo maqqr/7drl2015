@@ -9,7 +9,7 @@ The game works in Chrome and Internet Explorer 11. It does not work in Firefox (
 
 #### Development blog
 
-[You can read development report for each day reports here.](https://teamkalamakkara.wordpress.com/)
+[You can read development report for each day here.](https://teamkalamakkara.wordpress.com/)
 
 #### How to build from the sources
 
