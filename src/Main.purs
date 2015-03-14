@@ -152,8 +152,11 @@ updateCreatures advance g@(Game state') =
                                     in { p: fromMaybe zerop (points !! gen.n), game: gen.game }
 
                 validPatrolPoints :: [Point]
-                validPatrolPoints = filter canWalkOn $ levelPoints state.level
+                validPatrolPoints = filter (\p -> canWalkOn p && isNotWater p) $ levelPoints state.level
                     where
+                        isNotWater p = not <<< isWater <<< fromMaybe Air $ getTile state.level p
+                        isWater Water = true
+                        isWater _     = false
                         canWalkOn p = isValidMove state.level p && not (isValidMove state.level (p .+. {x: 0, y: 1}))
 
                 updateAI :: GameState -> AI -> GameState
@@ -244,7 +247,7 @@ playerAttack i g@(Game state) =
 
 npcAttack :: Creature -> GameState -> GameState
 npcAttack c g = let attack = npcHit c g
-                in if attack.hit then addMsg (show c.ctype ++ " hit you!") <<< (\(Game st) -> Game st { player = takeDamage (npcWeapon c) c st.player }) $ attack.game
+                in if attack.hit then addMsg (show c.ctype ++ " hit you!") <<< (\(Game st) -> Game st { player = playerTakeDamage attack.game (npcWeapon c) c st.player }) $ attack.game
                 else addMsg (capitalize (show c.ctype) ++ " tried to " ++ attackVerb c.ctype ++ " you, but missed.") attack.game
     where
         attackVerb Archer = "shoot"
@@ -260,12 +263,20 @@ playerHit g@(Game state) = let u = useSkill (weaponStat $ playerWeapon g).attack
 npcHit :: Creature -> GameState -> { hit :: Boolean, game :: GameState }
 npcHit c g = let u = randInt 0 99 g in { hit: u.n < baseHitChance c, game: u.game }
 
+playerTakeDamage :: GameState -> Item -> Creature -> Creature -> Creature
+playerTakeDamage (Game state) weapon attacker defender = defender { stats = defender.stats { hp = defender.stats.hp - damage } }
+    where
+        damage = min 1 $ (weaponStat weapon).damage + statModf attacker.stats.str - armor
+        armor = bodyArmor -- + shieldArmor
+        bodyArmor = fromMaybe 0 $ (\i -> (armorStat i).defence) <$> M.lookup ArmorSlot state.equipments
+        shieldArmor = fromMaybe 0 $ (\i -> (armorStat i).defence) <$> M.lookup ShieldSlot state.equipments
+
 takeDamage :: Item -> Creature -> Creature -> Creature
 takeDamage weapon attacker defender = defender { stats = defender.stats { hp = defender.stats.hp - damage } }
     where
-        damage = (weaponStat weapon).damage + statModf attacker.stats.str
+        damage = min 1 $ (weaponStat weapon).damage + statModf attacker.stats.str
 
-takeFallingDamage :: Number -- points dropped
+takeFallingDamage :: Number -- tiles dropped
                   -> Number -- weightRatio: inventory + equipments weight / maxCarryingCapacity weightRatio
                   -> Creature -- player
                   -> Creature 
@@ -354,8 +365,8 @@ movePlayer delta g@(Game state) = let blockIndex = enemyBlocks state.npcs 0
             checkEscape <<< updateWorld false (calcSpeed g) <<< addItemOnGroundMessage <<< useMoveSkill $ Game state { player = move (Game state) state.player { vel = zerop } delta }
             else checkTile <<< fromMaybe Air <<< getTile state.level $ newpos
     where
-        checkEscape :: GameState -> GameState --lootPercentage g < 50
-        checkEscape g | newpos.x < 0 = if false then addMsg "You can leave the map once you have collected 50% of the total loot." g else levelDone g
+        checkEscape :: GameState -> GameState
+        checkEscape g | newpos.x < 0 = if lootPercentage g < 50 then addMsg "You can leave the map once you have collected 50% of the total loot." g else levelDone g
         checkEscape g | otherwise    = g
 
         useMoveSkill :: GameState -> GameState
@@ -597,7 +608,7 @@ setLevel def (Game state) = arrivalMsg <<< setLevelPoints <<< genLoot <<< genIte
 onKeyPress :: Console -> GameState -> Number -> ConsoleEff GameState
 
 -- If player has 0 hp left, kill the player (no key can save you!)
--- onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
+onKeyPress console (Game state) _ | state.player.stats.hp <= 0 = return $ Death { playerName: state.playerName, points: state.points }
 -- In death, press enter to start again
 onKeyPress console (Death d) key | key == 13 = return $ MainMenu
 
