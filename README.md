@@ -5,11 +5,11 @@ The game is a turn-based platformer roguelike with sneaking and thievery.
 
 The game works in Chrome and Internet Explorer 11. It does not work in Firefox (tested with version 36.0.1). For some reason the max recursion limit is reached and the program stops working.
 
-[You can play the (currently unfinished) game here.](https://dl.dropboxusercontent.com/u/51067730/7drl2015/index.html)
+[You can play the game here.](https://dl.dropboxusercontent.com/u/51067730/7drl2015/index.html)
 
 #### Development blog
 
-[You can read daily development reports here.](https://teamkalamakkara.wordpress.com/)
+[You can read development report for each day reports here.](https://teamkalamakkara.wordpress.com/)
 
 #### How to build from the sources
 
