@@ -29,7 +29,7 @@ function Console (width, height, gamestate, callbacks) {
                                             this.charHeight * this.consoleHeight);
     document.body.appendChild(this.renderer.view);
     this.gamestate = gamestate;
-    this.font = PIXI.BaseTexture.fromImage("https://dl.dropboxusercontent.com/u/51067730/terminal.png", true, PIXI.scaleModes.NEAREST);
+    this.font = PIXI.BaseTexture.fromImage("terminal.png", true, PIXI.scaleModes.NEAREST);
 
     this.initCharMap();
     this.initCells();
