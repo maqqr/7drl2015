@@ -265,14 +265,13 @@ takeDamage weapon attacker defender = defender { stats = defender.stats { hp = d
     where
         damage = (weaponStat weapon).damage + statModf attacker.stats.str
 
-takeFallingDamage :: Number -- starting y position
-                  -> Number -- ending y position
+takeFallingDamage :: Number -- points dropped
                   -> Number -- weightRatio: inventory + equipments weight / maxCarryingCapacity weightRatio
                   -> Creature -- player
                   -> Creature 
-takeFallingDamage y0 y1 wr pl | y0 - y1 >= 3 = pl { stats = pl.stats { hp = pl.stats.hp - damage } }
+takeFallingDamage d wr pl | d >= 3 = pl { stats = pl.stats { hp = pl.stats.hp - damage } }
     where
-        damage = floor ((y0 - y1 - 2) * (1 + wr)) * ((y0 - y1 - 2) * (1 + wr))
+        damage = floor ((d - 2) * (1 + wr)) * ((d - 2) * (1 + wr))
 takeFallingDamage _ _ _ c = c
 
 
