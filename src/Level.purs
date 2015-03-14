@@ -189,7 +189,14 @@ allLevels = [{ name: "a small village"
              , itemPos: [p 34 14, p 25 14, p 30 11, p 35 11, p 78 13]
              , lootPos: [p 54 13, p 23 14, p 24 14, p 28 11, p 76 13, p 74 13]
              , npcPos: [patrol (p 77 13), patrol (p 46 13)]
-             , startPos: {x: 3, y: 13}}]
+             , startPos: {x: 3, y: 13}}
+
+            ,{ name: "an old mine"
+             , plan: mine
+             , itemPos: [p 73 5, p 7 10, p 29 10, p 17 22, p 2 24, p 1 24]
+             , lootPos: [p 6 24, p 7 24, p 50 24, p 35 17, p 3 12, p 70 13, p 69 13, p 40 8, p 18 17]
+             , npcPos: [patrol (p 19 15), aIdle (p 74 5), aIdle (p 42 17), aIdle (p 1 24)]
+             , startPos: {x: 1, y: 5}}]
     where
         p x y = {x: x, y: y}
 
