@@ -189,7 +189,14 @@ allLevels = [{ name: "a small village"
              , itemPos: [p 34 14, p 25 14, p 30 11, p 35 11, p 78 13]
              , lootPos: [p 54 13, p 23 14, p 24 14, p 28 11, p 76 13, p 74 13]
              , npcPos: [patrol (p 77 13), patrol (p 46 13)]
-             , startPos: {x: 3, y: 13}}]
+             , startPos: {x: 3, y: 13}}
+
+            ,{ name: "a mine enterance"
+             , plan: mines
+             , itemPos: [p 17 20, p 17 22, p 70 5, p 3 15, p 30 12, p 37 17, p 43 17]
+             , lootPos: [p 59 21, p 5 24, p 7 24, p 37 2, p 74 5, p 72 5, p 27 10, p 4 10, p 6 10, p 18 15, p 37 22]
+             , npcPos: [patrol (p 59 24), idler (p 28 15)]
+             , startPos: {x: 6, y: 5}}]
     where
         p x y = {x: x, y: y}
 
@@ -327,7 +334,7 @@ mines =
     ,"####cc#####<######################cc#############ccccccccc########ccccc######<##"
     ,"###cc######<#####CCCC############cc###############cc########c######c#########<##"
     ,"###ccccccccccccc*CCCC+cccccccccccccccccccccccccccccccccccccccccccccc#########<##"
-    ,"######################################c######c#############cc################c##"
+    ,"#######c##############################c######c#############cc################c##"
     ,"#######ccccccccccccccccccccccccc#####cc###cccccc#############################c##"
     ,"###############################c#############################################c##"
     ,"######c############cccccccccccccccc<<<<<cccccccccccccccccc*cccccccc*cccccccc*cc#"
